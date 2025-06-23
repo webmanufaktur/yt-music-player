@@ -681,7 +681,8 @@ class YouTubeMusicPlayer {
       title: trackData.title,
       artist: trackData.artist,
       tags: trackData.tags,
-      duration: trackData.duration || 0,
+      duration: 0,
+      // Will be fetched from YouTube when the video loads
       thumbnail: getThumbnailUrl(trackData.id),
       url: `https://youtu.be/${trackData.id}`,
       addedAt: /* @__PURE__ */ new Date()

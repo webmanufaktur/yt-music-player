@@ -285,14 +285,13 @@ export class YouTubeMusicPlayer {
     title: string;
     artist?: string;
     tags?: string[];
-    duration?: number;
   }): Promise<Track | null> {
     const track: Track = {
       id: trackData.id,
       title: trackData.title,
       artist: trackData.artist,
       tags: trackData.tags,
-      duration: trackData.duration || 0,
+      duration: 0, // Will be fetched from YouTube when the video loads
       thumbnail: getThumbnailUrl(trackData.id),
       url: `https://youtu.be/${trackData.id}`,
       addedAt: new Date(),

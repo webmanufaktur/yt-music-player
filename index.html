@@ -488,21 +488,20 @@
             
             if (track) {
                 trackElement.style.display = 'block';
-                titleElement.textContent = track.title;
                 
-                let info = '';
+                // Display: [artist] - [title]
                 if (track.artist) {
-                    info += `by ${track.artist}`;
-                }
-                if (track.tags && track.tags.length > 0) {
-                    info += info ? ' • ' : '';
-                    info += track.tags.slice(0, 3).join(', ');
-                }
-                if (!info) {
-                    info = `Video ID: ${track.id}`;
+                    titleElement.textContent = `${track.artist} - ${track.title}`;
+                } else {
+                    titleElement.textContent = track.title;
                 }
                 
-                infoElement.textContent = info;
+                // Display tags
+                if (track.tags && track.tags.length > 0) {
+                    infoElement.textContent = track.tags.join(', ');
+                } else {
+                    infoElement.textContent = `Video ID: ${track.id}`;
+                }
             } else {
                 trackElement.style.display = 'none';
             }
