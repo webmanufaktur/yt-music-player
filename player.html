@@ -186,7 +186,17 @@
         <!-- Playlist Panel (Initially Hidden) -->
         <div id="playlistPanel" class="mt-4 bg-white rounded-2xl shadow-lg overflow-hidden hidden">
             <div class="p-4 border-b border-gray-100">
-                <h3 class="font-semibold text-gray-900">Playlist</h3>
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-semibold text-gray-900">Playlist</h3>
+                    <div class="relative">
+                        <select id="playlistSelector" onchange="switchPlaylist(this.value)" 
+                                class="text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                            <option value="bangers">🔥 Bangers</option>
+                            <option value="mash">🎵 Mash</option>
+                            <option value="original">📀 Original</option>
+                        </select>
+                    </div>
+                </div>
                 <p class="text-sm text-gray-600">
                     <span id="trackCount">0</span> tracks
                 </p>
@@ -220,10 +230,20 @@
         let isPlaylistOpen = false;
         let isLiked = false;
         
+        // Available playlists
+        const availablePlaylists = [
+            { id: 'bangers', name: '🔥 Bangers', file: 'playlist-bangers.json' },
+            { id: 'mash', name: '🎵 Mash', file: 'playlist-mash.json' },
+            { id: 'original', name: '📀 Original', file: 'tracklist.json' }
+        ];
+        
+        let currentPlaylistId = 'bangers'; // Default to bangers
+
         // Load tracklist from JSON file
-        async function loadTracklist() {
+        async function loadTracklist(playlistFile = null) {
             try {
-                const response = await fetch('./tracklist.json');
+                const file = playlistFile || availablePlaylists.find(p => p.id === currentPlaylistId)?.file || 'playlist-bangers.json';
+                const response = await fetch(`./${file}`);
                 const tracklist = await response.json();
                 return tracklist;
             } catch (error) {
@@ -249,23 +269,61 @@
             try {
                 const tracklist = await loadTracklist();
                 const currentHash = calculateTracklistHash(tracklist);
-                const storedHash = localStorage.getItem('ytMusicPlayer:tracklistHash');
+                const storageKey = `ytMusicPlayer:tracklistHash:${currentPlaylistId}`;
+                const storedHash = localStorage.getItem(storageKey);
                 
                 if (storedHash && storedHash !== currentHash) {
                     // Tracklist changed, clear stored data
                     console.log('Tracklist changed, clearing stored data...');
                     localStorage.removeItem('ytMusicPlayer:playerState');
-                    localStorage.setItem('ytMusicPlayer:tracklistHash', currentHash);
+                    localStorage.setItem(storageKey, currentHash);
                     return true; // Indicates data was cleared
                 } else if (!storedHash) {
                     // First time, store hash
-                    localStorage.setItem('ytMusicPlayer:tracklistHash', currentHash);
+                    localStorage.setItem(storageKey, currentHash);
                 }
                 
                 return false; // No changes
             } catch (error) {
                 console.error('Failed to check tracklist changes:', error);
                 return false;
+            }
+        }
+
+        // Switch to a different playlist
+        async function switchPlaylist(playlistId) {
+            if (playlistId === currentPlaylistId) return;
+            
+            try {
+                updateStatus('🔄 Switching playlist...');
+                
+                // Update current playlist
+                currentPlaylistId = playlistId;
+                
+                // Clear current playlist
+                player.clearPlaylist();
+                
+                // Load new tracklist
+                await loadInitialTracks();
+                
+                // Update UI
+                updateUI();
+                updatePlaylistSelector();
+                
+                const playlistName = availablePlaylists.find(p => p.id === playlistId)?.name || 'Unknown';
+                updateStatus(`✅ Switched to ${playlistName}!`);
+                
+            } catch (error) {
+                updateStatus('❌ Failed to switch playlist');
+                console.error('Failed to switch playlist:', error);
+            }
+        }
+
+        // Update playlist selector to reflect current playlist
+        function updatePlaylistSelector() {
+            const selector = document.getElementById('playlistSelector');
+            if (selector) {
+                selector.value = currentPlaylistId;
             }
         }
         
@@ -514,6 +572,7 @@
             updatePlaylist();
             updateSettingsButtons();
             updateCurrentTrack(player.getCurrentTrack());
+            updatePlaylistSelector();
         }
 
         function formatTime(seconds) {
@@ -527,6 +586,8 @@
         window.togglePlay = function() {
             player.togglePlay();
         };
+
+        window.switchPlaylist = switchPlaylist;
 
         window.next = function() {
             player.next();
