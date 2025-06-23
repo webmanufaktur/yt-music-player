@@ -653,6 +653,13 @@ export class YouTubeMusicPlayer {
     this.storage.saveState(state);
   }
 
+  /**
+   * Check if playlist has been initialized with tracks
+   */
+  hasInitializedPlaylist(): boolean {
+    return this.playlist.tracks.length > 0;
+  }
+
   private loadStoredState(): void {
     if (!this.storage) return;
 

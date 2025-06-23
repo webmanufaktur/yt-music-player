@@ -396,10 +396,53 @@
                 return [];
             }
         }
+
+        // Calculate simple hash of tracklist for change detection
+        function calculateTracklistHash(tracklist) {
+            const str = JSON.stringify(tracklist.map(t => ({ id: t.id, title: t.title, artist: t.artist })));
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32-bit integer
+            }
+            return hash.toString();
+        }
+
+        // Check if tracklist has changed and clear storage if needed
+        async function checkTracklistChanges() {
+            try {
+                const tracklist = await loadTracklist();
+                const currentHash = calculateTracklistHash(tracklist);
+                const storedHash = localStorage.getItem('ytMusicPlayer:tracklistHash');
+                
+                if (storedHash && storedHash !== currentHash) {
+                    // Tracklist changed, clear stored data
+                    console.log('Tracklist changed, clearing stored data...');
+                    localStorage.removeItem('ytMusicPlayer:playerState');
+                    localStorage.setItem('ytMusicPlayer:tracklistHash', currentHash);
+                    return true; // Indicates data was cleared
+                } else if (!storedHash) {
+                    // First time, store hash
+                    localStorage.setItem('ytMusicPlayer:tracklistHash', currentHash);
+                }
+                
+                return false; // No changes
+            } catch (error) {
+                console.error('Failed to check tracklist changes:', error);
+                return false;
+            }
+        }
         
         // Initialize player
         async function initPlayer() {
             try {
+                // Check if tracklist changed and clear storage if needed
+                const tracklistChanged = await checkTracklistChanges();
+                if (tracklistChanged) {
+                    updateStatus('📋 Tracklist updated, loading new tracks...');
+                }
+
                 player = new YouTubeMusicPlayer({
                     containerId: 'youtube-player',
                     autoplay: false,
@@ -409,9 +452,17 @@
 
                 // Set up event listeners
                 player.on('ready', async () => {
-                    updateStatus('🎉 Player ready! Loading tracks...');
+                    updateStatus('🎉 Player ready!');
                     // Note: CORS errors from doubleclick.net are normal (YouTube ads) and can be ignored
-                    await loadInitialTracks();
+                    
+                    // Only load initial tracks if no playlist exists (prevent duplicates on reload)
+                    if (!player.hasInitializedPlaylist()) {
+                        updateStatus('🎉 Player ready! Loading tracks...');
+                        await loadInitialTracks();
+                    } else {
+                        updateStatus('🎉 Player ready! Playlist loaded from storage.');
+                    }
+                    
                     updateUI();
                 });
 

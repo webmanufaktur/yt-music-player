@@ -978,6 +978,12 @@ class YouTubeMusicPlayer {
     };
     this.storage.saveState(state);
   }
+  /**
+   * Check if playlist has been initialized with tracks
+   */
+  hasInitializedPlaylist() {
+    return this.playlist.tracks.length > 0;
+  }
   loadStoredState() {
     if (!this.storage) return;
     const state = this.storage.loadState();
