@@ -1,10 +1,9 @@
 import { defineConfig } from 'vite';
-import { resolve } from 'path';
 
 export default defineConfig({
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
+      entry: 'src/index.ts',
       name: 'YouTubeMusicPlayer',
       fileName: (format) => `youtube-music-player.${format}.js`,
       formats: ['es', 'umd', 'iife']
@@ -27,9 +26,5 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true
-  },
-  test: {
-    globals: true,
-    environment: 'jsdom'
   }
 }); 

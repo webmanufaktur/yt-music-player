@@ -1,0 +1,66 @@
+@import 'tailwindcss';
+
+/* Custom styles for the music player */
+:root {
+  --player-bg: #ffffff;
+  --player-text: #1f2937;
+  --player-accent: #ef4444;
+  --player-secondary: #6b7280;
+  --player-border: #e5e7eb;
+}
+
+/* Custom animations */
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+/* Progress bar custom styling */
+.progress-track {
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.progress-track::-webkit-slider-track {
+  background: #e5e7eb;
+  height: 4px;
+  border-radius: 2px;
+}
+
+.progress-track::-webkit-slider-thumb {
+  appearance: none;
+  height: 12px;
+  width: 12px;
+  border-radius: 50%;
+  background: #ef4444;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.progress-track::-moz-range-track {
+  background: #e5e7eb;
+  height: 4px;
+  border-radius: 2px;
+  border: none;
+}
+
+.progress-track::-moz-range-thumb {
+  height: 12px;
+  width: 12px;
+  border-radius: 50%;
+  background: #ef4444;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}

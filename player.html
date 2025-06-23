@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎵 Modern YouTube Music Player</title>
+    <link rel="stylesheet" href="./src/styles.css">
+    <style>
+        /* Additional custom styles for the modern player */
+        .album-art {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .glass-effect {
+            backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.9);
+        }
+        
+        .control-button {
+            transition: all 0.2s ease;
+        }
+        
+        .control-button:hover {
+            transform: scale(1.05);
+        }
+        
+        .control-button:active {
+            transform: scale(0.95);
+        }
+        
+        .play-button {
+            background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+            box-shadow: 0 4px 15px rgba(31, 41, 55, 0.3);
+        }
+        
+        .play-button:hover {
+            box-shadow: 0 6px 20px rgba(31, 41, 55, 0.4);
+        }
+        
+        .playlist-item {
+            transition: all 0.2s ease;
+        }
+        
+        .playlist-item:hover {
+            background: rgba(239, 68, 68, 0.05);
+            border-left: 4px solid #ef4444;
+        }
+        
+        .playlist-item.active {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid #ef4444;
+        }
+        
+        .playlist-item.active .track-title {
+            color: #ef4444;
+        }
+        
+        .progress-container {
+            position: relative;
+        }
+        
+        .progress-bar {
+            height: 4px;
+            background: #e5e7eb;
+            border-radius: 2px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+            transition: width 0.1s ease;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-sm mx-auto">
+        <!-- Main Player Card -->
+        <div class="bg-white rounded-3xl shadow-xl overflow-hidden">
+            <!-- Album Art Section -->
+            <div class="relative aspect-square album-art flex items-center justify-center">
+                <div class="w-32 h-32 bg-white/20 rounded-full flex items-center justify-center">
+                    <svg class="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                    </svg>
+                </div>
+                <!-- Status indicator -->
+                <div class="absolute top-4 right-4">
+                    <div id="statusIndicator" class="w-3 h-3 bg-green-400 rounded-full animate-pulse-dot"></div>
+                </div>
+            </div>
+
+            <!-- Song Info -->
+            <div class="p-6 pb-4">
+                <h3 id="trackTitle" class="font-semibold text-lg text-gray-900 truncate mb-1">
+                    Loading...
+                </h3>
+                <p id="trackInfo" class="text-gray-600 text-sm truncate">
+                    Please wait
+                </p>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="px-6 pb-4">
+                <div class="progress-container mb-2">
+                    <div class="progress-bar" onclick="seek(event)">
+                        <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="flex justify-between text-xs text-gray-500">
+                    <span id="currentTime">0:00</span>
+                    <span id="duration">0:00</span>
+                </div>
+            </div>
+
+            <!-- Main Controls -->
+            <div class="flex items-center justify-center gap-4 px-6 py-4">
+                <button onclick="toggleShuffle()" id="shuffleBtn" 
+                        class="control-button w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                    </svg>
+                </button>
+
+                <button onclick="previous()" 
+                        class="control-button w-10 h-10 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+                    </svg>
+                </button>
+
+                <button onclick="togglePlay()" id="playBtn"
+                        class="control-button play-button w-12 h-12 flex items-center justify-center text-white rounded-full">
+                    <svg id="playIcon" class="w-6 h-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"/>
+                    </svg>
+                    <svg id="pauseIcon" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                    </svg>
+                </button>
+
+                <button onclick="next()" 
+                        class="control-button w-10 h-10 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+                    </svg>
+                </button>
+
+                <button onclick="toggleRepeat()" id="repeatBtn"
+                        class="control-button w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Secondary Controls -->
+            <div class="flex items-center justify-between px-6 pb-6">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleLike()" id="likeBtn"
+                            class="control-button w-8 h-8 flex items-center justify-center text-gray-600 hover:text-red-500 rounded-lg">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                        </svg>
+                    </button>
+
+                    <button onclick="copyTrackInfo()"
+                            class="control-button w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <button onclick="togglePlaylist()" id="playlistToggle"
+                        class="control-button w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Playlist Panel (Initially Hidden) -->
+        <div id="playlistPanel" class="mt-4 bg-white rounded-2xl shadow-lg overflow-hidden hidden">
+            <div class="p-4 border-b border-gray-100">
+                <h3 class="font-semibold text-gray-900">Playlist</h3>
+                <p class="text-sm text-gray-600">
+                    <span id="trackCount">0</span> tracks
+                </p>
+            </div>
+            <div id="trackList" class="max-h-80 overflow-y-auto">
+                <div class="flex items-center justify-center p-8 text-gray-500">
+                    <div class="text-center">
+                        <svg class="w-12 h-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                        </svg>
+                        <p class="text-sm">Loading tracks...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Message -->
+        <div class="mt-4 text-center">
+            <p id="status" class="text-sm text-gray-600">Initializing player...</p>
+        </div>
+    </div>
+
+    <!-- Hidden YouTube player container -->
+    <div id="youtube-player" style="position: absolute; left: -9999px; top: -9999px; width: 0; height: 0; opacity: 0; pointer-events: none;"></div>
+
+    <!-- Load the player using ES modules from the source -->
+    <script type="module">
+        import { YouTubeMusicPlayer, RepeatMode } from './src/index.ts';
+        
+        let player;
+        let isPlaylistOpen = false;
+        let isLiked = false;
+        
+        // Load tracklist from JSON file
+        async function loadTracklist() {
+            try {
+                const response = await fetch('./tracklist.json');
+                const tracklist = await response.json();
+                return tracklist;
+            } catch (error) {
+                console.error('Failed to load tracklist:', error);
+                return [];
+            }
+        }
+
+        // Calculate simple hash of tracklist for change detection
+        function calculateTracklistHash(tracklist) {
+            const str = JSON.stringify(tracklist.map(t => ({ id: t.id, title: t.title, artist: t.artist })));
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32-bit integer
+            }
+            return hash.toString();
+        }
+
+        // Check if tracklist has changed and clear storage if needed
+        async function checkTracklistChanges() {
+            try {
+                const tracklist = await loadTracklist();
+                const currentHash = calculateTracklistHash(tracklist);
+                const storedHash = localStorage.getItem('ytMusicPlayer:tracklistHash');
+                
+                if (storedHash && storedHash !== currentHash) {
+                    // Tracklist changed, clear stored data
+                    console.log('Tracklist changed, clearing stored data...');
+                    localStorage.removeItem('ytMusicPlayer:playerState');
+                    localStorage.setItem('ytMusicPlayer:tracklistHash', currentHash);
+                    return true; // Indicates data was cleared
+                } else if (!storedHash) {
+                    // First time, store hash
+                    localStorage.setItem('ytMusicPlayer:tracklistHash', currentHash);
+                }
+                
+                return false; // No changes
+            } catch (error) {
+                console.error('Failed to check tracklist changes:', error);
+                return false;
+            }
+        }
+        
+        // Initialize player
+        async function initPlayer() {
+            try {
+                // Check if tracklist changed and clear storage if needed
+                const tracklistChanged = await checkTracklistChanges();
+                if (tracklistChanged) {
+                    updateStatus('📋 Tracklist updated, loading new tracks...');
+                }
+
+                player = new YouTubeMusicPlayer({
+                    containerId: 'youtube-player',
+                    autoplay: false,
+                    volume: 100, // Full volume - users control via system/browser
+                    saveState: true
+                });
+
+                // Set up event listeners
+                player.on('ready', async () => {
+                    updateStatus('🎉 Player ready!');
+                    // Note: CORS errors from doubleclick.net are normal (YouTube ads) and can be ignored
+                    
+                    // Only load initial tracks if no playlist exists (prevent duplicates on reload)
+                    if (!player.hasInitializedPlaylist()) {
+                        updateStatus('🎉 Player ready! Loading tracks...');
+                        await loadInitialTracks();
+                    } else {
+                        updateStatus('🎉 Player ready! Playlist loaded from storage.');
+                    }
+                    
+                    updateUI();
+                });
+
+                player.on('trackChange', (data) => {
+                    updateCurrentTrack(data.track);
+                    updatePlaylist();
+                });
+
+                player.on('stateChange', (data) => {
+                    updatePlayButton(data.isPlaying);
+                    updateStatusIndicator(data.isPlaying, data.isPaused);
+                    if (data.isPlaying) {
+                        updateStatus('▶ Playing...');
+                    } else if (data.isPaused) {
+                        updateStatus('⏸ Paused');
+                    }
+                });
+
+                player.on('timeUpdate', (data) => {
+                    updateProgress(data.currentTime, data.duration);
+                });
+
+                player.on('playlistChange', () => {
+                    updatePlaylist();
+                });
+
+                player.on('settingsChange', () => {
+                    updateSettingsButtons();
+                });
+
+                player.on('error', (error) => {
+                    updateStatus(`❌ Error: ${error.message}`);
+                    console.error('Player error:', error);
+                });
+
+            } catch (error) {
+                updateStatus(`❌ Failed to initialize player: ${error.message}`);
+                console.error('Initialization error:', error);
+            }
+        }
+
+        // Load initial tracks from JSON
+        async function loadInitialTracks() {
+            try {
+                const tracklist = await loadTracklist();
+                let addedCount = 0;
+                
+                for (const trackData of tracklist) {
+                    try {
+                        const track = await player.addTrackWithMetadata(trackData);
+                        if (track) {
+                            addedCount++;
+                        }
+                    } catch (error) {
+                        console.warn('Failed to add track:', trackData, error);
+                    }
+                }
+                
+                updateStatus(`✅ Loaded ${addedCount} tracks from tracklist!`);
+            } catch (error) {
+                updateStatus('❌ Failed to load initial tracks');
+                console.error('Failed to load initial tracks:', error);
+            }
+        }
+
+        // UI Functions
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+
+        function updateStatusIndicator(isPlaying, isPaused) {
+            const indicator = document.getElementById('statusIndicator');
+            if (isPlaying) {
+                indicator.className = 'w-3 h-3 bg-green-400 rounded-full animate-pulse-dot';
+            } else if (isPaused) {
+                indicator.className = 'w-3 h-3 bg-yellow-400 rounded-full';
+            } else {
+                indicator.className = 'w-3 h-3 bg-gray-400 rounded-full';
+            }
+        }
+
+        function updateCurrentTrack(track) {
+            const titleElement = document.getElementById('trackTitle');
+            const infoElement = document.getElementById('trackInfo');
+            
+            if (track) {
+                // Display: [artist] - [title]
+                if (track.artist) {
+                    titleElement.textContent = `${track.artist} - ${track.title}`;
+                } else {
+                    titleElement.textContent = track.title;
+                }
+                
+                // Display tags
+                if (track.tags && track.tags.length > 0) {
+                    infoElement.textContent = track.tags.join(', ');
+                } else {
+                    infoElement.textContent = `Video ID: ${track.id}`;
+                }
+            } else {
+                titleElement.textContent = 'No track loaded';
+                infoElement.textContent = 'Select a track to start playing';
+            }
+        }
+
+        function updatePlayButton(isPlaying) {
+            const playIcon = document.getElementById('playIcon');
+            const pauseIcon = document.getElementById('pauseIcon');
+            
+            if (isPlaying) {
+                playIcon.classList.add('hidden');
+                pauseIcon.classList.remove('hidden');
+            } else {
+                playIcon.classList.remove('hidden');
+                pauseIcon.classList.add('hidden');
+            }
+        }
+
+        function updateProgress(currentTime, duration) {
+            const progressFill = document.getElementById('progressFill');
+            const currentTimeEl = document.getElementById('currentTime');
+            const durationEl = document.getElementById('duration');
+            
+            const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+            progressFill.style.width = progress + '%';
+            
+            currentTimeEl.textContent = formatTime(currentTime);
+            durationEl.textContent = formatTime(duration);
+        }
+
+        function updatePlaylist() {
+            const trackList = document.getElementById('trackList');
+            const trackCount = document.getElementById('trackCount');
+            const playlist = player.getPlaylist();
+            
+            trackCount.textContent = playlist.tracks.length;
+            
+            if (playlist.tracks.length === 0) {
+                trackList.innerHTML = `
+                    <div class="flex items-center justify-center p-8 text-gray-500">
+                        <div class="text-center">
+                            <svg class="w-12 h-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                            </svg>
+                            <p class="text-sm">Loading tracks...</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            trackList.innerHTML = playlist.tracks.map((track, index) => {
+                const isCurrent = index === playlist.currentIndex;
+                
+                let artist = '';
+                if (track.artist) {
+                    artist = track.artist;
+                } else if (track.tags && track.tags.length > 0) {
+                    artist = track.tags.slice(0, 2).join(', ');
+                }
+                
+                const duration = track.duration > 0 ? formatTime(track.duration) : '';
+                
+                return `
+                    <div class="playlist-item p-4 cursor-pointer ${isCurrent ? 'active' : ''}" onclick="jumpToTrack(${index})">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 flex items-center justify-center">
+                                ${isCurrent ? `
+                                    <div class="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                                        <div class="w-2 h-2 bg-white rounded-full animate-pulse-dot"></div>
+                                    </div>
+                                ` : `
+                                    <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M8 5v14l11-7z"/>
+                                    </svg>
+                                `}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h4 class="track-title font-medium text-sm truncate ${isCurrent ? 'text-red-600' : 'text-gray-900'}">${track.title}</h4>
+                                <p class="text-xs text-gray-500 truncate">${artist}</p>
+                            </div>
+                            ${duration ? `<span class="text-xs text-gray-400">${duration}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateSettingsButtons() {
+            const settings = player.getSettings();
+            const shuffleBtn = document.getElementById('shuffleBtn');
+            const repeatBtn = document.getElementById('repeatBtn');
+            
+            // Update shuffle button
+            if (settings.shuffled) {
+                shuffleBtn.classList.add('text-red-500');
+                shuffleBtn.classList.remove('text-gray-600');
+            } else {
+                shuffleBtn.classList.add('text-gray-600');
+                shuffleBtn.classList.remove('text-red-500');
+            }
+            
+            // Update repeat button
+            if (settings.repeatMode !== RepeatMode.NONE) {
+                repeatBtn.classList.add('text-red-500');
+                repeatBtn.classList.remove('text-gray-600');
+            } else {
+                repeatBtn.classList.add('text-gray-600');
+                repeatBtn.classList.remove('text-red-500');
+            }
+        }
+
+        function updateUI() {
+            updatePlaylist();
+            updateSettingsButtons();
+            updateCurrentTrack(player.getCurrentTrack());
+        }
+
+        function formatTime(seconds) {
+            if (isNaN(seconds) || seconds < 0) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Control Functions
+        window.togglePlay = function() {
+            player.togglePlay();
+        };
+
+        window.next = function() {
+            player.next();
+        };
+
+        window.previous = function() {
+            player.previous();
+        };
+
+        window.seek = function(event) {
+            const progressBar = event.currentTarget;
+            const rect = progressBar.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const percentage = x / rect.width;
+            const duration = player.getDuration();
+            const seekTime = percentage * duration;
+            
+            player.seekTo(seekTime);
+        };
+
+        window.toggleShuffle = function() {
+            player.toggleShuffle();
+        };
+
+        window.toggleRepeat = function() {
+            player.toggleRepeat();
+        };
+
+        window.jumpToTrack = function(index) {
+            player.jumpToTrack(index);
+        };
+
+        window.togglePlaylist = function() {
+            const panel = document.getElementById('playlistPanel');
+            isPlaylistOpen = !isPlaylistOpen;
+            
+            if (isPlaylistOpen) {
+                panel.classList.remove('hidden');
+            } else {
+                panel.classList.add('hidden');
+            }
+        };
+
+        window.toggleLike = function() {
+            const btn = document.getElementById('likeBtn');
+            isLiked = !isLiked;
+            
+            if (isLiked) {
+                btn.innerHTML = `
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                    </svg>
+                `;
+                btn.classList.add('text-red-500');
+                btn.classList.remove('text-gray-600');
+            } else {
+                btn.innerHTML = `
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                    </svg>
+                `;
+                btn.classList.add('text-gray-600');
+                btn.classList.remove('text-red-500');
+            }
+        };
+
+        window.copyTrackInfo = function() {
+            const track = player.getCurrentTrack();
+            if (track) {
+                const text = track.artist ? `${track.artist} - ${track.title}` : track.title;
+                navigator.clipboard.writeText(text).then(() => {
+                    updateStatus('📋 Track info copied to clipboard!');
+                    setTimeout(() => {
+                        updateStatus('🎵 Ready to play');
+                    }, 2000);
+                });
+            }
+        };
+
+        // Initialize player when page loads
+        initPlayer();
+    </script>
+</body>
+</html> 
