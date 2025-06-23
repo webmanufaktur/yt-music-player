@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Music Player Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .add-track {
+            margin-bottom: 30px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .add-track input {
+            flex: 1;
+            min-width: 300px;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .add-track input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            text-transform: none;
+            letter-spacing: normal;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .play-btn {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            font-size: 30px;
+        }
+
+        .progress-container {
+            margin: 20px 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+
+        .time-display {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            margin-top: 8px;
+            opacity: 0.8;
+        }
+
+
+
+        .current-track {
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+        }
+
+        .track-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .track-info {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .playlist {
+            margin-top: 30px;
+        }
+
+        .playlist h3 {
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .track-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .track-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .track-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(5px);
+        }
+
+        .track-item.current {
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            color: #333;
+        }
+
+        .track-thumbnail {
+            width: 50px;
+            height: 38px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .track-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .track-name {
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .track-duration {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-top: 2px;
+        }
+
+        .remove-btn {
+            background: #FF6B6B;
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .settings {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .setting-btn {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: transparent;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .setting-btn.active {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.6);
+        }
+
+        .status {
+            text-align: center;
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            font-size: 14px;
+        }
+
+        .quick-add {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .add-track, .quick-add {
+                flex-direction: column;
+            }
+            
+            .add-track input {
+                min-width: auto;
+            }
+            
+            .controls {
+                gap: 15px;
+            }
+            
+            .control-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 18px;
+            }
+            
+            .play-btn {
+                width: 60px;
+                height: 60px;
+                font-size: 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 YouTube Music Player</h1>
+        
+
+
+        <div class="status" id="status">Loading YouTube API...</div>
+
+        <div class="current-track" id="currentTrack" style="display: none;">
+            <div class="track-title" id="trackTitle">No track loaded</div>
+            <div class="track-info" id="trackInfo">Add a track to start playing</div>
+        </div>
+
+        <div class="progress-container">
+            <div class="progress-bar" onclick="seek(event)">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="time-display">
+                <span id="currentTime">0:00</span>
+                <span id="duration">0:00</span>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="previous()">⏮</button>
+            <button class="control-btn play-btn" id="playBtn" onclick="togglePlay()">▶</button>
+            <button class="control-btn" onclick="next()">⏭</button>
+            <button class="control-btn" onclick="stop()">⏹</button>
+        </div>
+
+
+
+        <div class="settings">
+            <button class="setting-btn" id="shuffleBtn" onclick="toggleShuffle()">🔀 Shuffle</button>
+            <button class="setting-btn" id="repeatBtn" onclick="toggleRepeat()">🔁 Repeat All</button>
+        </div>
+
+        <div class="playlist">
+            <h3>Playlist (<span id="trackCount">0</span> tracks)</h3>
+            <div class="track-list" id="trackList">
+                <div style="text-align: center; padding: 40px; opacity: 0.6;">
+                    Your playlist is empty. Add some YouTube videos above or load the tracklist!
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden YouTube player container -->
+    <div id="youtube-player" style="position: absolute; left: -9999px; top: -9999px; width: 0; height: 0; opacity: 0; pointer-events: none;"></div>
+
+    <!-- Load the player using ES modules from the source -->
+    <script type="module">
+        import { YouTubeMusicPlayer, RepeatMode } from './src/index.ts';
+        
+        let player;
+        
+        // Load tracklist from JSON file
+        async function loadTracklist() {
+            try {
+                const response = await fetch('./tracklist.json');
+                const tracklist = await response.json();
+                return tracklist;
+            } catch (error) {
+                console.error('Failed to load tracklist:', error);
+                return [];
+            }
+        }
+
+        // Calculate simple hash of tracklist for change detection
+        function calculateTracklistHash(tracklist) {
+            const str = JSON.stringify(tracklist.map(t => ({ id: t.id, title: t.title, artist: t.artist })));
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32-bit integer
+            }
+            return hash.toString();
+        }
+
+        // Check if tracklist has changed and clear storage if needed
+        async function checkTracklistChanges() {
+            try {
+                const tracklist = await loadTracklist();
+                const currentHash = calculateTracklistHash(tracklist);
+                const storedHash = localStorage.getItem('ytMusicPlayer:tracklistHash');
+                
+                if (storedHash && storedHash !== currentHash) {
+                    // Tracklist changed, clear stored data
+                    console.log('Tracklist changed, clearing stored data...');
+                    localStorage.removeItem('ytMusicPlayer:playerState');
+                    localStorage.setItem('ytMusicPlayer:tracklistHash', currentHash);
+                    return true; // Indicates data was cleared
+                } else if (!storedHash) {
+                    // First time, store hash
+                    localStorage.setItem('ytMusicPlayer:tracklistHash', currentHash);
+                }
+                
+                return false; // No changes
+            } catch (error) {
+                console.error('Failed to check tracklist changes:', error);
+                return false;
+            }
+        }
+        
+        // Initialize player
+        async function initPlayer() {
+            try {
+                // Check if tracklist changed and clear storage if needed
+                const tracklistChanged = await checkTracklistChanges();
+                if (tracklistChanged) {
+                    updateStatus('📋 Tracklist updated, loading new tracks...');
+                }
+
+                player = new YouTubeMusicPlayer({
+                    containerId: 'youtube-player',
+                    autoplay: false,
+                    volume: 100, // Full volume - users control via system/browser
+                    saveState: true
+                });
+
+                // Set up event listeners
+                player.on('ready', async () => {
+                    updateStatus('🎉 Player ready!');
+                    // Note: CORS errors from doubleclick.net are normal (YouTube ads) and can be ignored
+                    
+                    // Only load initial tracks if no playlist exists (prevent duplicates on reload)
+                    if (!player.hasInitializedPlaylist()) {
+                        updateStatus('🎉 Player ready! Loading tracks...');
+                        await loadInitialTracks();
+                    } else {
+                        updateStatus('🎉 Player ready! Playlist loaded from storage.');
+                    }
+                    
+                    updateUI();
+                });
+
+                player.on('trackChange', (data) => {
+                    updateCurrentTrack(data.track);
+                    updatePlaylist();
+                });
+
+                player.on('stateChange', (data) => {
+                    updatePlayButton(data.isPlaying);
+                    if (data.isPlaying) {
+                        updateStatus('▶ Playing...');
+                    } else if (data.isPaused) {
+                        updateStatus('⏸ Paused');
+                    }
+                });
+
+                player.on('timeUpdate', (data) => {
+                    updateProgress(data.currentTime, data.duration);
+                });
+
+                player.on('playlistChange', () => {
+                    updatePlaylist();
+                });
+
+                player.on('settingsChange', () => {
+                    updateSettingsButtons();
+                });
+
+                player.on('error', (error) => {
+                    updateStatus(`❌ Error: ${error.message}`);
+                    console.error('Player error:', error);
+                });
+
+            } catch (error) {
+                updateStatus(`❌ Failed to initialize player: ${error.message}`);
+                console.error('Initialization error:', error);
+            }
+        }
+
+        // Load initial tracks from JSON
+        async function loadInitialTracks() {
+            try {
+                const tracklist = await loadTracklist();
+                let addedCount = 0;
+                
+                for (const trackData of tracklist) {
+                    try {
+                        const track = await player.addTrackWithMetadata(trackData);
+                        if (track) {
+                            addedCount++;
+                        }
+                    } catch (error) {
+                        console.warn('Failed to add track:', trackData, error);
+                    }
+                }
+                
+                updateStatus(`✅ Loaded ${addedCount} tracks from tracklist!`);
+            } catch (error) {
+                updateStatus('❌ Failed to load initial tracks');
+                console.error('Failed to load initial tracks:', error);
+            }
+        }
+
+        // UI Functions
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+
+        function updateCurrentTrack(track) {
+            const trackElement = document.getElementById('currentTrack');
+            const titleElement = document.getElementById('trackTitle');
+            const infoElement = document.getElementById('trackInfo');
+            
+            if (track) {
+                trackElement.style.display = 'block';
+                
+                // Display: [artist] - [title]
+                if (track.artist) {
+                    titleElement.textContent = `${track.artist} - ${track.title}`;
+                } else {
+                    titleElement.textContent = track.title;
+                }
+                
+                // Display tags
+                if (track.tags && track.tags.length > 0) {
+                    infoElement.textContent = track.tags.join(', ');
+                } else {
+                    infoElement.textContent = `Video ID: ${track.id}`;
+                }
+            } else {
+                trackElement.style.display = 'none';
+            }
+        }
+
+        function updatePlayButton(isPlaying) {
+            const btn = document.getElementById('playBtn');
+            btn.textContent = isPlaying ? '⏸' : '▶';
+        }
+
+        function updateProgress(currentTime, duration) {
+            const progressFill = document.getElementById('progressFill');
+            const currentTimeEl = document.getElementById('currentTime');
+            const durationEl = document.getElementById('duration');
+            
+            const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+            progressFill.style.width = progress + '%';
+            
+            currentTimeEl.textContent = formatTime(currentTime);
+            durationEl.textContent = formatTime(duration);
+        }
+
+        function updatePlaylist() {
+            const trackList = document.getElementById('trackList');
+            const trackCount = document.getElementById('trackCount');
+            const playlist = player.getPlaylist();
+            
+            trackCount.textContent = playlist.tracks.length;
+            
+            if (playlist.tracks.length === 0) {
+                trackList.innerHTML = '<div style="text-align: center; padding: 40px; opacity: 0.6;">Loading tracks...</div>';
+                return;
+            }
+            
+            trackList.innerHTML = playlist.tracks.map((track, index) => {
+                const isCurrent = index === playlist.currentIndex;
+                
+                let artist = '';
+                if (track.artist) {
+                    artist = `by ${track.artist}`;
+                } else if (track.tags && track.tags.length > 0) {
+                    artist = track.tags.slice(0, 2).join(', ');
+                }
+                
+                const duration = track.duration > 0 ? formatTime(track.duration) : track.id;
+                
+                return `
+                    <div class="track-item ${isCurrent ? 'current' : ''}" onclick="jumpToTrack(${index})">
+                        <div class="track-thumbnail">🎵</div>
+                        <div class="track-details">
+                            <div class="track-name">${track.title}</div>
+                            <div class="track-duration">${artist || duration}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateSettingsButtons() {
+            const settings = player.getSettings();
+            const shuffleBtn = document.getElementById('shuffleBtn');
+            const repeatBtn = document.getElementById('repeatBtn');
+            
+            shuffleBtn.className = 'setting-btn' + (settings.shuffled ? ' active' : '');
+            
+            const repeatTexts = {
+                [RepeatMode.NONE]: '🔁 Repeat Off',
+                [RepeatMode.ALL]: '🔁 Repeat All',
+                [RepeatMode.ONE]: '🔂 Repeat One'
+            };
+            
+            repeatBtn.textContent = repeatTexts[settings.repeatMode];
+            repeatBtn.className = 'setting-btn' + (settings.repeatMode !== RepeatMode.NONE ? ' active' : '');
+        }
+
+        function updateUI() {
+            updatePlaylist();
+            updateSettingsButtons();
+            updateCurrentTrack(player.getCurrentTrack());
+        }
+
+        function formatTime(seconds) {
+            if (isNaN(seconds) || seconds < 0) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Control Functions
+
+        window.togglePlay = function() {
+            player.togglePlay();
+        };
+
+        window.next = function() {
+            player.next();
+        };
+
+        window.previous = function() {
+            player.previous();
+        };
+
+        window.stop = function() {
+            player.stop();
+            updateStatus('⏹ Stopped');
+        };
+
+        window.seek = function(event) {
+            const progressBar = event.currentTarget;
+            const rect = progressBar.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const percentage = x / rect.width;
+            const duration = player.getDuration();
+            const seekTime = percentage * duration;
+            
+            player.seekTo(seekTime);
+        };
+
+
+
+        window.toggleShuffle = function() {
+            player.toggleShuffle();
+        };
+
+        window.toggleRepeat = function() {
+            player.toggleRepeat();
+        };
+
+        window.jumpToTrack = function(index) {
+            player.jumpToTrack(index);
+        };
+
+        // Initialize player when page loads
+        initPlayer();
+    </script>
+</body>
+</html> 
