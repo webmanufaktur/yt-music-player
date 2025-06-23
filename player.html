@@ -10,6 +10,46 @@
         .album-art {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
+
+        /* Album art specific styles */
+        #albumArt {
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        #albumArtFallback {
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        #albumArtContainer {
+            transition: all 0.3s ease-in-out;
+            min-height: 200px; /* Ensure minimum height during transitions */
+        }
+
+        /* Smooth loading animation */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .album-art img {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        /* Ensure proper aspect ratios */
+        .aspect-square {
+            aspect-ratio: 1 / 1;
+        }
+
+        .aspect-video {
+            aspect-ratio: 16 / 9;
+        }
+
+        /* Handle different aspect ratios gracefully */
+        #albumArtContainer.aspect-video #albumArtFallback {
+            width: auto;
+            height: 8rem; /* Adjust fallback size for video aspect */
+            aspect-ratio: 1 / 1;
+        }
         
         .glass-effect {
             backdrop-filter: blur(20px);
@@ -80,14 +120,26 @@
         <!-- Main Player Card -->
         <div class="bg-white rounded-3xl shadow-xl overflow-hidden">
             <!-- Album Art Section -->
-            <div class="relative aspect-square album-art flex items-center justify-center">
-                <div class="w-32 h-32 bg-white/20 rounded-full flex items-center justify-center">
+            <div id="albumArtContainer" class="relative aspect-square album-art flex items-center justify-center overflow-hidden transition-all duration-300">
+                <!-- YouTube Thumbnail -->
+                <img id="albumArt" 
+                     class="w-full h-full object-cover hidden" 
+                     alt="Album Art"
+                     onload="handleAlbumArtLoad(this)"
+                     onerror="showAlbumArt(false)">
+                
+                <!-- Fallback SVG Icon -->
+                <div id="albumArtFallback" class="w-32 h-32 bg-white/20 rounded-full flex items-center justify-center">
                     <svg class="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
                     </svg>
                 </div>
+                
+                <!-- Dark overlay for better text readability when image is shown -->
+                <div id="albumArtOverlay" class="absolute inset-0 bg-black/20 hidden"></div>
+                
                 <!-- Status indicator -->
-                <div class="absolute top-4 right-4">
+                <div class="absolute top-4 right-4 z-10">
                     <div id="statusIndicator" class="w-3 h-3 bg-green-400 rounded-full animate-pulse-dot"></div>
                 </div>
             </div>
@@ -193,7 +245,6 @@
                                 class="text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent">
                             <option value="bangers">🔥 Bangers</option>
                             <option value="mash">🎵 Mash</option>
-                            <option value="original">📀 Original</option>
                         </select>
                     </div>
                 </div>
@@ -213,10 +264,7 @@
             </div>
         </div>
 
-        <!-- Status Message -->
-        <div class="mt-4 text-center">
-            <p id="status" class="text-sm text-gray-600">Initializing player...</p>
-        </div>
+
     </div>
 
     <!-- Hidden YouTube player container -->
@@ -228,13 +276,11 @@
         
         let player;
         let isPlaylistOpen = false;
-        let isLiked = false;
         
         // Available playlists
         const availablePlaylists = [
             { id: 'bangers', name: '🔥 Bangers', file: 'playlist-bangers.json' },
-            { id: 'mash', name: '🎵 Mash', file: 'playlist-mash.json' },
-            { id: 'original', name: '📀 Original', file: 'tracklist.json' }
+            { id: 'mash', name: '🎵 Mash', file: 'playlist-mash.json' }
         ];
         
         let currentPlaylistId = 'bangers'; // Default to bangers
@@ -423,7 +469,7 @@
 
         // UI Functions
         function updateStatus(message) {
-            document.getElementById('status').textContent = message;
+            console.log(message);
         }
 
         function updateStatusIndicator(isPlaying, isPaused) {
@@ -435,6 +481,96 @@
             } else {
                 indicator.className = 'w-3 h-3 bg-gray-400 rounded-full';
             }
+        }
+
+        // Handle album art load and aspect ratio detection
+        function handleAlbumArtLoad(img) {
+            const aspectRatio = img.naturalWidth / img.naturalHeight;
+            const container = document.getElementById('albumArtContainer');
+            
+            // Debug info (can be removed in production)
+            console.log(`Album art loaded: ${img.naturalWidth}x${img.naturalHeight}, aspect ratio: ${aspectRatio.toFixed(2)}`);
+            
+            // Determine if image is more square (1:1) or widescreen (16:9)
+            // Threshold of 1.3 to account for slight variations
+            if (aspectRatio > 1.3) {
+                // Widescreen image (16:9 or similar)
+                container.classList.remove('aspect-square');
+                container.classList.add('aspect-video');
+                console.log('Applied aspect-video class');
+            } else {
+                // Square or portrait image
+                container.classList.remove('aspect-video');
+                container.classList.add('aspect-square');
+                console.log('Applied aspect-square class');
+            }
+            
+            // Show the image
+            showAlbumArt(true);
+        }
+
+        // Show/hide album art based on load success
+        function showAlbumArt(success) {
+            const albumArt = document.getElementById('albumArt');
+            const fallback = document.getElementById('albumArtFallback');
+            const overlay = document.getElementById('albumArtOverlay');
+            
+            if (success) {
+                albumArt.classList.remove('hidden');
+                fallback.classList.add('hidden');
+                overlay.classList.remove('hidden');
+            } else {
+                albumArt.classList.add('hidden');
+                fallback.classList.remove('hidden');
+                overlay.classList.add('hidden');
+                
+                // Reset to square aspect ratio for fallback
+                const container = document.getElementById('albumArtContainer');
+                container.classList.remove('aspect-video');
+                container.classList.add('aspect-square');
+            }
+        }
+
+        // Update album art with YouTube thumbnail
+        function updateAlbumArt(videoId) {
+            if (!videoId) {
+                showAlbumArt(false);
+                return;
+            }
+            
+            const albumArt = document.getElementById('albumArt');
+            
+            // Try different thumbnail qualities for better results
+            // maxresdefault (1280x720) -> hqdefault (480x360) -> mqdefault (320x180)
+            const thumbnailUrls = [
+                `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+                `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+                `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
+            ];
+            
+            // Try loading the highest quality first
+            tryLoadThumbnail(albumArt, thumbnailUrls, 0);
+        }
+
+        // Recursively try loading thumbnails from highest to lowest quality
+        function tryLoadThumbnail(imgElement, urls, index) {
+            if (index >= urls.length) {
+                // All URLs failed, show fallback
+                showAlbumArt(false);
+                return;
+            }
+            
+            // Create a temporary image to test loading
+            const testImg = new Image();
+            testImg.onload = function() {
+                // Success - use this URL
+                imgElement.src = urls[index];
+            };
+            testImg.onerror = function() {
+                // Failed - try next URL
+                tryLoadThumbnail(imgElement, urls, index + 1);
+            };
+            testImg.src = urls[index];
         }
 
         function updateCurrentTrack(track) {
@@ -455,9 +591,13 @@
                 } else {
                     infoElement.textContent = `Video ID: ${track.id}`;
                 }
+                
+                // Update album art
+                updateAlbumArt(track.id);
             } else {
                 titleElement.textContent = 'No track loaded';
                 infoElement.textContent = 'Select a track to start playing';
+                showAlbumArt(false);
             }
         }
 
@@ -632,40 +772,28 @@
         };
 
         window.toggleLike = function() {
-            const btn = document.getElementById('likeBtn');
-            isLiked = !isLiked;
-            
-            if (isLiked) {
-                btn.innerHTML = `
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
-                    </svg>
-                `;
-                btn.classList.add('text-red-500');
-                btn.classList.remove('text-gray-600');
-            } else {
-                btn.innerHTML = `
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
-                    </svg>
-                `;
-                btn.classList.add('text-gray-600');
-                btn.classList.remove('text-red-500');
+            const track = player.getCurrentTrack();
+            if (track) {
+                const youtubeUrl = `https://www.youtube.com/watch?v=${track.id}`;
+                window.open(youtubeUrl, '_blank');
             }
         };
 
         window.copyTrackInfo = function() {
             const track = player.getCurrentTrack();
             if (track) {
-                const text = track.artist ? `${track.artist} - ${track.title}` : track.title;
-                navigator.clipboard.writeText(text).then(() => {
-                    updateStatus('📋 Track info copied to clipboard!');
-                    setTimeout(() => {
-                        updateStatus('🎵 Ready to play');
-                    }, 2000);
+                const youtubeUrl = `https://www.youtube.com/watch?v=${track.id}`;
+                navigator.clipboard.writeText(youtubeUrl).then(() => {
+                    console.log('📋 YouTube URL copied to clipboard!');
+                }).catch(err => {
+                    console.error('Failed to copy to clipboard:', err);
                 });
             }
         };
+
+        // Make album art functions globally available for HTML callbacks
+        window.showAlbumArt = showAlbumArt;
+        window.handleAlbumArtLoad = handleAlbumArtLoad;
 
         // Initialize player when page loads
         initPlayer();
