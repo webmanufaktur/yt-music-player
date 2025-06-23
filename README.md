@@ -1,215 +1,118 @@
 # YouTube Music Player
 
-A powerful, TypeScript-based YouTube music player with playlist management, localStorage persistence, and a beautiful user interface. Play YouTube videos as audio-only with full music player controls.
+A modern, TypeScript-based YouTube music player with playlist management, localStorage persistence, and a beautiful user interface. Play YouTube videos as audio-only with full music player controls.
 
 ## ✨ Features
 
-- 🎵 **Audio-Only YouTube Playback** - Plays YouTube videos without video display (0x0 pixels)
-- 🎪 **Full Music Player Controls** - Play, pause, next, previous, seek, volume control
-- 📱 **Responsive Design** - Works on desktop and mobile devices
-- 💾 **localStorage Persistence** - Remembers playlist and position between sessions
+- 🎵 **Audio-Only YouTube Playbook** - Plays YouTube videos without video display (hidden iframe)
+- 🎪 **Complete Music Player Controls** - Play, pause, next, previous, seek, volume control
+- 📱 **Responsive Design** - Modern UI with Tailwind CSS that works on desktop and mobile
+- 💾 **localStorage Persistence** - Remembers playlist and playback position between sessions
 - 🔀 **Shuffle & Repeat** - Multiple playback modes (none, all, one)
-- 🎯 **Playlist Management** - Add, remove, reorder tracks
+- 🎯 **Playlist Management** - Add, remove, and navigate through tracks
 - ⚡ **Real-time Updates** - Live progress tracking and status updates
-- 🎨 **Beautiful UI** - Modern, gradient-based design with smooth animations
-- 🔧 **TypeScript Support** - Full type safety and IntelliSense
-- 📦 **Multiple Build Formats** - ES modules, UMD, and IIFE builds
+- 🎨 **Beautiful Modern UI** - Clean design with gradients and smooth animations
+- 🔧 **TypeScript Support** - Full type safety and comprehensive type definitions
+- 📦 **Vite Build System** - Fast development and optimized production builds
 
 ## 🚀 Quick Start
 
-### Installation
+### Development
 
 ```bash
+# Clone and install dependencies
 npm install
+
+# Start development server
+npm run dev
+
+# Build for production
 npm run build
+
+# Preview production build
+npm run preview
 ```
 
-### Basic Usage
+### Usage
 
-```html
-<!DOCTYPE html>
-<html>
-<head>
-    <title>My Music Player</title>
-</head>
-<body>
-    <div id="player-container"></div>
-    
-    <script type="module">
-        import { YouTubeMusicPlayer } from './dist/youtube-music-player.es.js';
-        
-        const player = new YouTubeMusicPlayer({
-            containerId: 'player-container',
-            autoplay: false,
-            volume: 80
-        });
-        
-        // Add tracks
-        await player.addTrack('https://youtu.be/dQw4w9WgXcQ', 'Rick Astley - Never Gonna Give You Up');
-        
-        // Control playback
-        player.play();
-    </script>
-</body>
-</html>
-```
+The player is designed as a single-page application with a demo interface. Open the built `index.html` in a browser or run the development server to use the player.
 
-### JavaScript (UMD)
+Key components:
 
-```html
-<script src="./dist/youtube-music-player.umd.js"></script>
-<script>
-    const player = new YouTubeMusicPlayer.default({
-        containerId: 'player-container'
-    });
-</script>
-```
+- Modern card-based UI with album art display
+- Full music player controls (play/pause, next/previous, seek)
+- Progress bar with click-to-seek functionality
+- Volume controls and time display
+- Playlist management with visual feedback
 
 ## 📖 API Reference
 
-### Constructor
+### Core Classes
+
+#### `YouTubeMusicPlayer`
+
+The main player class that handles YouTube video playback as audio.
 
 ```typescript
-const player = new YouTubeMusicPlayer(config: PlayerConfig);
+import { YouTubeMusicPlayer, RepeatMode } from './src/index';
+
+const player = new YouTubeMusicPlayer({
+  containerId: 'player-container',
+  autoplay: false,
+  volume: 80,
+  repeat: RepeatMode.ALL,
+  shuffle: false,
+  saveState: true,
+});
 ```
 
-#### PlayerConfig
+#### Configuration Options
 
 ```typescript
 interface PlayerConfig {
-    containerId: string;           // ID of container element
-    autoplay?: boolean;           // Auto-start playing (default: false)
-    volume?: number;              // Initial volume 0-100 (default: 80)
-    repeat?: RepeatMode;          // Repeat mode (default: RepeatMode.ALL)
-    shuffle?: boolean;            // Enable shuffle (default: false)
-    enableKeyboardShortcuts?: boolean; // Keyboard controls (default: false)
-    saveState?: boolean;          // localStorage persistence (default: true)
-    storageKey?: string;          // Custom storage key (default: 'ytMusicPlayer')
+  containerId: string; // ID of container element
+  autoplay?: boolean; // Auto-start playing (default: false)
+  volume?: number; // Initial volume 0-100 (default: 80)
+  repeat?: RepeatMode; // Repeat mode (default: ALL)
+  shuffle?: boolean; // Enable shuffle (default: false)
+  saveState?: boolean; // localStorage persistence (default: true)
+  storageKey?: string; // Custom storage key (default: auto-generated)
 }
 ```
 
-### Methods
-
-#### Playlist Management
+### Core Methods
 
 ```typescript
-// Add a track to the playlist
+// Playlist Management
 await player.addTrack(url: string, title?: string): Promise<Track | null>
-
-// Remove track by index
 player.removeTrack(index: number): boolean
-
-// Clear entire playlist
 player.clearPlaylist(): void
-
-// Jump to specific track
 player.jumpToTrack(index: number): void
-```
 
-#### Playback Controls
-
-```typescript
-// Basic controls
+// Playback Controls
 player.play(): void
 player.pause(): void
-player.stop(): void
 player.togglePlay(): void
-
-// Navigation
 player.next(): void
 player.previous(): void
-
-// Seeking
 player.seekTo(seconds: number): void
 
-// Volume (0-100)
+// Settings
 player.setVolume(volume: number): void
 player.toggleMute(): void
-```
-
-#### Settings
-
-```typescript
-// Shuffle
 player.toggleShuffle(): void
-
-// Repeat modes: none, all, one
 player.toggleRepeat(): void
-```
 
-#### Getters
-
-```typescript
-// Current state
+// State Getters
 player.getCurrentTrack(): Track | null
 player.getPlaylist(): Playlist
-player.getSettings(): PlayerSettings
 player.getCurrentTime(): number
 player.getDuration(): number
-player.getProgress(): number // 0-100%
 player.getVolume(): number
-
-// Status checks
 player.isPlaying(): boolean
-player.isPaused(): boolean
-player.isMuted(): boolean
 ```
 
-### Events
-
-Listen to player events:
-
-```typescript
-// Player ready
-player.on('ready', (data) => {
-    console.log('Player ready!', data.player);
-});
-
-// Track changes
-player.on('trackChange', (data) => {
-    console.log('Now playing:', data.track.title);
-});
-
-// Playback state changes
-player.on('stateChange', (data) => {
-    console.log('Playing:', data.isPlaying);
-});
-
-// Time updates (every 500ms while playing)
-player.on('timeUpdate', (data) => {
-    console.log(`${data.currentTime}s / ${data.duration}s`);
-});
-
-// Playlist changes
-player.on('playlistChange', (data) => {
-    console.log('Playlist updated:', data.action);
-});
-
-// Settings changes
-player.on('settingsChange', (data) => {
-    console.log('Settings updated:', data.settings);
-});
-
-// Volume changes
-player.on('volumeChange', (data) => {
-    console.log('Volume:', data.volume);
-});
-
-// Errors
-player.on('error', (error) => {
-    console.error('Player error:', error.message);
-});
-```
-
-### Remove Event Listeners
-
-```typescript
-player.off(event: PlayerEventType, handler: EventHandler): void
-```
-
-## 🎯 URL Formats Supported
-
-The player supports various YouTube URL formats:
+## 🎯 Supported YouTube URL Formats
 
 - `https://www.youtube.com/watch?v=VIDEO_ID`
 - `https://youtu.be/VIDEO_ID`
@@ -217,61 +120,52 @@ The player supports various YouTube URL formats:
 - `https://m.youtube.com/watch?v=VIDEO_ID`
 - Direct video ID: `VIDEO_ID`
 
-## 🔧 Development
-
-### Project Structure
+## 🔧 Development Structure
 
 ```
 src/
-├── types/           # TypeScript type definitions
-├── utils/           # Utility functions
-│   ├── youtube.ts   # YouTube API and URL handling
-│   └── storage.ts   # localStorage management
-├── player/          # Main player class
+├── player/              # Main player class
 │   └── YouTubeMusicPlayer.ts
-└── index.ts         # Main exports
+├── types/               # TypeScript definitions
+│   └── index.ts
+├── utils/               # Utility functions
+│   ├── youtube.ts       # YouTube API & URL handling
+│   └── storage.ts       # localStorage management
+├── styles.css           # Tailwind CSS styles
+└── index.ts             # Main exports
 
-dist/                # Built files
-├── youtube-music-player.es.js    # ES module
-├── youtube-music-player.umd.js   # UMD build
-└── youtube-music-player.iife.js  # IIFE build
+public/                  # Static assets and sample data
+├── playlist-bangers.json
+├── playlist-mash.json
+└── tracklist.json
+
+dist/                    # Built files (after npm run build)
+├── index.html
+└── assets/
+    ├── main-[hash].js   # Built JavaScript
+    └── main-[hash].css  # Built styles
 ```
 
-### Build Commands
+### Build System
+
+- **Vite** - Fast build tool with HMR for development
+- **TypeScript** - Full type checking and compilation
+- **Tailwind CSS** - Utility-first CSS framework
+- **ESLint & Prettier** - Code linting and formatting
+- **Terser** - JavaScript minification for production
+
+### Available Scripts
 
 ```bash
-# Development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Type checking
-npm run build:types
-
-# Linting
-npm run lint
-npm run lint:fix
-
-# Formatting
-npm run format
-npm run format:check
-
-# Testing
-npm run test
-npm run test:ui
-
-# Clean build files
-npm run clean
+npm run dev          # Development server with HMR
+npm run build        # Production build
+npm run preview      # Preview production build
+npm run lint         # ESLint code checking
+npm run lint:fix     # Auto-fix ESLint issues
+npm run format       # Format code with Prettier
+npm run test         # Run tests (if configured)
+npm run clean        # Clean dist directory
 ```
-
-### Development Server
-
-```bash
-npm run dev
-```
-
-Opens development server at `http://localhost:3000` with the demo page.
 
 ## 🌐 Browser Compatibility
 
@@ -284,91 +178,68 @@ Opens development server at `http://localhost:3000` with the demo page.
 - **iOS Safari 12+**
 - **Android Chrome 70+**
 
-### Requirements
+### Technical Requirements
 
-- HTML5 support
-- JavaScript ES2020+ features
+- HTML5 and modern JavaScript (ES2020+)
 - localStorage support
 - Fetch API support
-- HTTPS (required by YouTube API)
+- **HTTPS required** (YouTube API requirement)
+- postMessage support for iframe communication
 
-## 📚 Examples
+## 🎨 UI Features
 
-### Basic Music Player
+The current implementation includes:
 
-```typescript
-import { YouTubeMusicPlayer, RepeatMode } from 'youtube-music-player';
-
-const player = new YouTubeMusicPlayer({
-    containerId: 'my-player',
-    autoplay: true,
-    volume: 90,
-    repeat: RepeatMode.ALL
-});
-
-// Add some tracks
-const tracks = [
-    'https://youtu.be/dQw4w9WgXcQ',
-    'https://youtu.be/oHg5SJYRHA0',
-    'https://youtu.be/SQoA_wjmE9w'
-];
-
-for (const url of tracks) {
-    await player.addTrack(url);
-}
-
-// Set up UI updates
-player.on('trackChange', (data) => {
-    document.title = data.track.title;
-});
-
-player.on('timeUpdate', (data) => {
-    updateProgressBar(data.progress);
-});
-```
-
-### Playlist from Array
-
-```typescript
-const playlist = [
-    { url: 'https://youtu.be/dQw4w9WgXcQ', title: 'Never Gonna Give You Up' },
-    { url: 'https://youtu.be/oHg5SJYRHA0', title: 'RickRoll\'d' },
-];
-
-const player = new YouTubeMusicPlayer({
-    containerId: 'player'
-});
-
-// Load playlist
-for (const track of playlist) {
-    await player.addTrack(track.url, track.title);
-}
-
-// Start playing
-player.play();
-```
-
-### Custom Storage
-
-```typescript
-import { YouTubeMusicPlayer, LocalStorageManager } from 'youtube-music-player';
-
-const customStorage = new LocalStorageManager('myapp-music');
-
-const player = new YouTubeMusicPlayer({
-    containerId: 'player',
-    storageKey: 'custom-playlist'
-});
-```
+- **Modern Card Design** - Clean, rounded corners with shadows
+- **Album Art Display** - Shows YouTube video thumbnails or fallback icons
+- **Gradient Backgrounds** - Beautiful gradient overlays
+- **Responsive Layout** - Mobile-friendly design
+- **Interactive Controls** - Hover effects and smooth transitions
+- **Progress Visualization** - Clickable progress bar with real-time updates
+- **Status Indicators** - Visual feedback for player state
 
 ## 🔒 Privacy & Legal
 
 - Uses official YouTube IFrame Player API
 - No audio extraction or downloading
 - Respects YouTube's Terms of Service
-- All licensing handled by YouTube
+- All licensing handled by YouTube automatically
 - No server-side processing required
+- Player runs entirely in browser
 - HTTPS required for production use
+
+## 📝 Current Implementation Status
+
+### ✅ Completed Features
+
+- YouTube IFrame API integration
+- Audio-only playback (hidden iframe)
+- Basic playback controls (play/pause, next/previous)
+- Volume and seek controls
+- Playlist management (add/remove tracks)
+- localStorage persistence
+- Modern UI with Tailwind CSS
+- TypeScript implementation with full types
+- URL parsing for multiple YouTube formats
+- Error handling for invalid videos
+- Responsive design
+
+### 🚧 In Development
+
+- Advanced playlist features (drag & drop reordering)
+- Keyboard shortcuts support
+- Enhanced error messaging
+- Improved mobile experience
+- Additional player customization options
+
+### 🔮 Planned Features
+
+- Crossfade between tracks
+- Equalizer controls
+- Export/import playlists
+- Advanced search functionality
+- PWA (Progressive Web App) support
+- Additional streaming service integration
 
 ## 🤝 Contributing
 
@@ -380,26 +251,16 @@ const player = new YouTubeMusicPlayer({
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License.
 
 ## 🙏 Acknowledgments
 
 - YouTube IFrame Player API
 - TypeScript community
 - Vite build system
+- Tailwind CSS framework
 - All contributors and users
-
-## 📋 Roadmap
-
-- [ ] Keyboard shortcuts support
-- [ ] Visualizer integration
-- [ ] Crossfade between tracks
-- [ ] Equalizer controls
-- [ ] Export/import playlists
-- [ ] Integration with music services
-- [ ] PWA support
-- [ ] Advanced search functionality
 
 ---
 
-Made with ❤️ for music lovers who want to enjoy YouTube content as audio-only playlists. 
+Made with ❤️ for music lovers who want to enjoy YouTube content as audio-only playlists.
