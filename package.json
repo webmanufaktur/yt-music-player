@@ -1,6 +1,7 @@
 {
   "name": "youtube-music-player",
   "version": "1.0.0",
+  "type": "module",
   "description": "A TypeScript-based YouTube music player with playlist management and localStorage persistence",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

@@ -2,18 +2,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   build: {
-    lib: {
-      entry: 'src/index.ts',
-      name: 'YouTubeMusicPlayer',
-      fileName: (format) => `youtube-music-player.${format}.js`,
-      formats: ['es', 'umd', 'iife']
-    },
-    rollupOptions: {
-      external: [],
-      output: {
-        globals: {}
-      }
-    },
+    outDir: 'dist',
     sourcemap: true,
     minify: 'terser',
     terserOptions: {
@@ -21,10 +10,20 @@ export default defineConfig({
         drop_console: false,
         drop_debugger: true
       }
+    },
+    rollupOptions: {
+      input: {
+        main: './index.html'
+      }
     }
   },
   server: {
     port: 3000,
     open: true
-  }
+  },
+  preview: {
+    port: 4173,
+    open: true
+  },
+  publicDir: 'public'
 }); 
