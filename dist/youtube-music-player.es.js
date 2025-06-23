@@ -673,6 +673,33 @@ class YouTubeMusicPlayer {
     return track;
   }
   /**
+   * Add a track with enhanced metadata
+   */
+  async addTrackWithMetadata(trackData) {
+    const track = {
+      id: trackData.id,
+      title: trackData.title,
+      artist: trackData.artist,
+      tags: trackData.tags,
+      duration: trackData.duration || 0,
+      thumbnail: getThumbnailUrl(trackData.id),
+      url: `https://youtu.be/${trackData.id}`,
+      addedAt: /* @__PURE__ */ new Date()
+    };
+    this.playlist.tracks.push(track);
+    if (this.playlist.tracks.length === 1) {
+      this.playlist.currentIndex = 0;
+      this.loadCurrentTrack();
+    }
+    this.emit("playlistChange", {
+      playlist: this.playlist,
+      action: "add",
+      track
+    });
+    this.debouncedSaveState();
+    return track;
+  }
+  /**
    * Remove track from playlist
    */
   removeTrack(index) {

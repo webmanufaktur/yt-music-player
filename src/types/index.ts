@@ -42,6 +42,8 @@ export enum RepeatMode {
 export interface Track {
   id: string;
   title: string;
+  artist?: string;
+  tags?: string[];
   duration: number;
   thumbnail?: string;
   url: string;

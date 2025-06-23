@@ -333,15 +333,7 @@
     <div class="container">
         <h1>🎵 YouTube Music Player</h1>
         
-        <div class="add-track">
-            <input type="text" id="urlInput" placeholder="Paste YouTube URL here...">
-            <button class="btn" onclick="addTrack()">Add Track</button>
-        </div>
 
-        <div class="quick-add">
-            <button class="btn btn-secondary" onclick="loadFromTracklist()">📂 Load Tracklist</button>
-            <button class="btn btn-secondary" onclick="clearPlaylist()">🗑 Clear All</button>
-        </div>
 
         <div class="status" id="status">Loading YouTube API...</div>
 
@@ -393,14 +385,17 @@
         
         let player;
         
-        // Sample tracklist (matching tracklist.txt)
-        const tracklistUrls = [
-            'https://youtu.be/9bZkp7q19f0',  // Gangnam Style - PSY (known embeddable)
-            'https://youtu.be/kJQP7kiw5Fk',  // Despacito - Luis Fonsi (known embeddable)  
-            'https://youtu.be/uelHwf8o7_U',  // See You Again - Wiz Khalifa (known embeddable)
-            'https://youtu.be/M7lc1UVf-VE',  // Uptown Funk - Mark Ronson (known embeddable)
-            'https://youtu.be/ZZ5LpwO-An4'   // Hello - Adele (known embeddable)
-        ];
+        // Load tracklist from JSON file
+        async function loadTracklist() {
+            try {
+                const response = await fetch('./tracklist.json');
+                const tracklist = await response.json();
+                return tracklist;
+            } catch (error) {
+                console.error('Failed to load tracklist:', error);
+                return [];
+            }
+        }
         
         // Initialize player
         async function initPlayer() {
@@ -413,9 +408,10 @@
                 });
 
                 // Set up event listeners
-                player.on('ready', () => {
-                    updateStatus('Player ready! 🎉 Click "Load Tracklist" or add YouTube URLs manually.');
+                player.on('ready', async () => {
+                    updateStatus('🎉 Player ready! Loading tracks...');
                     // Note: CORS errors from doubleclick.net are normal (YouTube ads) and can be ignored
+                    await loadInitialTracks();
                     updateUI();
                 });
 
@@ -450,11 +446,33 @@
                     console.error('Player error:', error);
                 });
 
-
-
             } catch (error) {
                 updateStatus(`❌ Failed to initialize player: ${error.message}`);
                 console.error('Initialization error:', error);
+            }
+        }
+
+        // Load initial tracks from JSON
+        async function loadInitialTracks() {
+            try {
+                const tracklist = await loadTracklist();
+                let addedCount = 0;
+                
+                for (const trackData of tracklist) {
+                    try {
+                        const track = await player.addTrackWithMetadata(trackData);
+                        if (track) {
+                            addedCount++;
+                        }
+                    } catch (error) {
+                        console.warn('Failed to add track:', trackData, error);
+                    }
+                }
+                
+                updateStatus(`✅ Loaded ${addedCount} tracks from tracklist!`);
+            } catch (error) {
+                updateStatus('❌ Failed to load initial tracks');
+                console.error('Failed to load initial tracks:', error);
             }
         }
 
@@ -471,7 +489,20 @@
             if (track) {
                 trackElement.style.display = 'block';
                 titleElement.textContent = track.title;
-                infoElement.textContent = `Video ID: ${track.id}`;
+                
+                let info = '';
+                if (track.artist) {
+                    info += `by ${track.artist}`;
+                }
+                if (track.tags && track.tags.length > 0) {
+                    info += info ? ' • ' : '';
+                    info += track.tags.slice(0, 3).join(', ');
+                }
+                if (!info) {
+                    info = `Video ID: ${track.id}`;
+                }
+                
+                infoElement.textContent = info;
             } else {
                 trackElement.style.display = 'none';
             }
@@ -502,20 +533,29 @@
             trackCount.textContent = playlist.tracks.length;
             
             if (playlist.tracks.length === 0) {
-                trackList.innerHTML = '<div style="text-align: center; padding: 40px; opacity: 0.6;">Your playlist is empty. Add some YouTube videos above or load the tracklist!</div>';
+                trackList.innerHTML = '<div style="text-align: center; padding: 40px; opacity: 0.6;">Loading tracks...</div>';
                 return;
             }
             
             trackList.innerHTML = playlist.tracks.map((track, index) => {
                 const isCurrent = index === playlist.currentIndex;
+                
+                let artist = '';
+                if (track.artist) {
+                    artist = `by ${track.artist}`;
+                } else if (track.tags && track.tags.length > 0) {
+                    artist = track.tags.slice(0, 2).join(', ');
+                }
+                
+                const duration = track.duration > 0 ? formatTime(track.duration) : track.id;
+                
                 return `
                     <div class="track-item ${isCurrent ? 'current' : ''}" onclick="jumpToTrack(${index})">
                         <div class="track-thumbnail">🎵</div>
                         <div class="track-details">
                             <div class="track-name">${track.title}</div>
-                            <div class="track-duration">${track.id}</div>
+                            <div class="track-duration">${artist || duration}</div>
                         </div>
-                        <button class="remove-btn" onclick="removeTrack(${index}); event.stopPropagation();">×</button>
                     </div>
                 `;
             }).join('');
@@ -552,41 +592,6 @@
         }
 
         // Control Functions
-        window.addTrack = async function() {
-            const input = document.getElementById('urlInput');
-            const url = input.value.trim();
-            
-            if (!url) {
-                updateStatus('❌ Please enter a YouTube URL');
-                return;
-            }
-            
-            updateStatus('⏳ Adding track...');
-            const track = await player.addTrack(url);
-            
-            if (track) {
-                input.value = '';
-                updateStatus('✅ Track added successfully!');
-            }
-        };
-
-        window.loadFromTracklist = async function() {
-            updateStatus('⏳ Loading tracklist...');
-            let addedCount = 0;
-            
-            for (const url of tracklistUrls) {
-                try {
-                    const track = await player.addTrack(url);
-                    if (track) {
-                        addedCount++;
-                    }
-                } catch (error) {
-                    console.warn('Failed to add track:', url, error);
-                }
-            }
-            
-            updateStatus(`✅ Added ${addedCount} tracks from tracklist!`);
-        };
 
         window.togglePlay = function() {
             player.togglePlay();
@@ -626,27 +631,9 @@
             player.toggleRepeat();
         };
 
-        window.clearPlaylist = function() {
-            if (confirm('Are you sure you want to clear the entire playlist?')) {
-                player.clearPlaylist();
-                updateStatus('🗑 Playlist cleared');
-            }
-        };
-
         window.jumpToTrack = function(index) {
             player.jumpToTrack(index);
         };
-
-        window.removeTrack = function(index) {
-            player.removeTrack(index);
-        };
-
-        // Handle Enter key in URL input
-        document.getElementById('urlInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                addTrack();
-            }
-        });
 
         // Initialize player when page loads
         initPlayer();
