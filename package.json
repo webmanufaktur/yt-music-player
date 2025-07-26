@@ -16,7 +16,8 @@
     "format:check": "prettier --check src/**/*.{ts,tsx,css,html}",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "import": "node tools/import-playlist.js"
   },
   "keywords": [
     "youtube",
