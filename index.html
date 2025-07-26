@@ -285,7 +285,7 @@
                     <div class="relative">
                         <select id="playlistSelector" onchange="switchPlaylist(this.value)" 
                                 class="text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent">
-                            <option value="remote">🎵 Finest Music</option>
+                            <option value="remote">💀 Finest Music</option>
                             <option value="bangers">🔥 Bangers</option>
                             <option value="mash">🎵 Mash</option>
                         </select>
@@ -319,7 +319,7 @@
         
         // Available playlists
         const availablePlaylists = [
-            { id: 'remote', name: '🎵 Finest Music', file: 'playlist-remote.json', default: true },
+            { id: 'remote', name: '💀 Finest Music', file: 'playlist-remote.json', default: true },
             { id: 'bangers', name: '🔥 Bangers', file: 'playlist-bangers.json' },
             { id: 'mash', name: '🎵 Mash', file: 'playlist-mash.json' }
         ];
@@ -402,6 +402,17 @@
                 const playlistName = availablePlaylists.find(p => p.id === playlistId)?.name || 'Unknown';
                 updateStatus(`✅ Switched to ${playlistName}!`);
                 
+                // Update URL to reflect playlist change
+                updateBrowserURL();
+                
+                // Handle track parameter if present (after playlist switch)
+                if (window.urlTrackParam) {
+                    setTimeout(() => {
+                        jumpToTrackByName(window.urlTrackParam);
+                        delete window.urlTrackParam;
+                    }, 500);
+                }
+                
             } catch (error) {
                 updateStatus('❌ Failed to switch playlist');
                 console.error('Failed to switch playlist:', error);
@@ -435,6 +446,9 @@
                 // Set up event listeners
                 player.on('ready', async () => {
                     updateStatus('🎉 Player ready!');
+                    
+                    // Handle URL parameters first
+                    await handleURLParameters();
                     // Note: CORS errors from doubleclick.net are normal (YouTube ads) and can be ignored
                     
                     // Only load initial tracks if no playlist exists (prevent duplicates on reload)
@@ -446,11 +460,26 @@
                     }
                     
                     updateUI();
+                    
+                    // Handle track parameter if present (after playlist is loaded)
+                    if (window.urlTrackParam) {
+                        setTimeout(() => {
+                            jumpToTrackByName(window.urlTrackParam);
+                            delete window.urlTrackParam;
+                        }, 500); // Small delay to ensure playlist is fully loaded
+                    }
+                    
+                    // Update URL to reflect initial state (after small delay)
+                    setTimeout(() => {
+                        updateBrowserURL();
+                    }, 1000);
                 });
 
                 player.on('trackChange', (data) => {
                     updateCurrentTrack(data.track);
                     updatePlaylist();
+                    // Update URL to reflect track change
+                    updateBrowserURL();
                 });
 
                 player.on('stateChange', (data) => {
@@ -543,6 +572,10 @@
                 placeholder.classList.add('hidden');
                 overlay.classList.remove('hidden');
             } else {
+                // Randomly select one of the placeholder images (0-3)
+                const randomIndex = Math.floor(Math.random() * 4);
+                placeholder.src = `./placeholder_${randomIndex}.png`;
+                
                 albumArt.classList.add('hidden');
                 placeholder.classList.remove('hidden');
                 overlay.classList.add('hidden');
@@ -832,6 +865,9 @@
             
             // Save preference
             localStorage.setItem('ytMusicPlayer:videoMode', isVideoMode.toString());
+            
+            // Update URL to reflect video mode change
+            updateBrowserURL();
         };
         
         // Initialize video mode state
@@ -839,6 +875,102 @@
             if (isVideoMode) {
                 toggleVideoMode();
             }
+        }
+
+        // Parse URL parameters for deep linking
+        function parseURLParameters() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return {
+                playlist: urlParams.get('playlist'),
+                track: urlParams.get('track'), 
+                video: urlParams.get('video') === 'true'
+            };
+        }
+
+        // Handle URL parameters for deep linking
+        async function handleURLParameters() {
+            const params = parseURLParameters();
+            
+            // Handle video mode parameter
+            if (params.video && !isVideoMode) {
+                console.log('🎬 Enabling video mode from URL parameter');
+                toggleVideoMode();
+            }
+            
+            // Handle playlist parameter
+            if (params.playlist) {
+                const playlistExists = availablePlaylists.find(p => p.id === params.playlist);
+                if (playlistExists && params.playlist !== currentPlaylistId) {
+                    console.log(`📋 Loading playlist from URL: ${params.playlist}`);
+                    await switchPlaylist(params.playlist);
+                }
+            }
+            
+            // Handle track parameter - will be implemented after playlist loads
+            if (params.track) {
+                // Store for later use when playlist is ready
+                window.urlTrackParam = params.track;
+            }
+        }
+
+        // Jump to track by name or ID (for URL parameter)
+        function jumpToTrackByName(trackIdentifier) {
+            const playlist = player.getPlaylist();
+            if (!playlist || !playlist.tracks.length) {
+                console.warn('No playlist loaded for track jump');
+                return false;
+            }
+            
+            // Try to find track by title (case insensitive) or by video ID
+            const trackIndex = playlist.tracks.findIndex(track => 
+                track.title.toLowerCase().includes(trackIdentifier.toLowerCase()) ||
+                track.id === trackIdentifier ||
+                (track.artist && `${track.artist} - ${track.title}`.toLowerCase().includes(trackIdentifier.toLowerCase()))
+            );
+            
+            if (trackIndex !== -1) {
+                console.log(`🎵 Jumping to track: ${playlist.tracks[trackIndex].title}`);
+                player.jumpToTrack(trackIndex);
+                return true;
+            } else {
+                console.warn(`Track not found: ${trackIdentifier}`);
+                return false;
+            }
+        }
+
+        // Update browser URL to reflect current state
+        function updateBrowserURL() {
+            const currentTrack = player?.getCurrentTrack();
+            const params = new URLSearchParams();
+            
+            // Add playlist parameter if not default
+            if (currentPlaylistId !== defaultPlaylist.id) {
+                params.set('playlist', currentPlaylistId);
+            }
+            
+            // Add track parameter if a track is playing
+            if (currentTrack && currentTrack.title) {
+                // Use a sanitized version of the track title for readability
+                const trackParam = currentTrack.title
+                    .toLowerCase()
+                    .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+                    .replace(/\s+/g, '-') // Replace spaces with dashes
+                    .substring(0, 50); // Limit length
+                params.set('track', trackParam);
+            }
+            
+            // Add video parameter if video mode is enabled
+            if (isVideoMode) {
+                params.set('video', 'true');
+            }
+            
+            // Build the new URL
+            const baseUrl = window.location.pathname;
+            const queryString = params.toString();
+            const newUrl = queryString ? `${baseUrl}?${queryString}` : baseUrl;
+            
+            // Update the URL without reloading the page
+            window.history.replaceState({}, '', newUrl);
         }
 
         // Make album art functions globally available for HTML callbacks
