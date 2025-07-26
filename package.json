@@ -7,7 +7,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "node tools/inject-build-time.js && tsc && vite build",
     "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist/types",
     "preview": "vite preview",
     "lint": "eslint src --ext .ts,.tsx",
@@ -16,7 +16,8 @@
     "format:check": "prettier --check src/**/*.{ts,tsx,css,html}",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "import": "node tools/import-playlist.js"
   },
   "keywords": [
     "youtube",

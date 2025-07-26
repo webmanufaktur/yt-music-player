@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="build-time" content="2025-07-26">
     <title>🎵 Modern YouTube Music Player</title>
+    <link rel="stylesheet" href="./public/fonts/plex-mono/plex-mono.css">
     <link rel="stylesheet" href="./src/styles.css">
     <style>
         /* Additional custom styles for the modern player */
@@ -113,9 +115,83 @@
             transition: width 0.1s ease;
             border-radius: 2px;
         }
+        
+        /* Video mode styles */
+        .video-mode #albumArtContainer {
+            aspect-ratio: 16 / 9;
+        }
+        
+        .video-mode #youtube-player {
+            position: relative !important;
+            left: auto !important;
+            top: auto !important;
+            width: 100% !important;
+            height: 100% !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+        
+        .video-mode #albumArt,
+        .video-mode #albumArtPlaceholder,
+        .video-mode #albumArtOverlay {
+            display: none !important;
+        }
+        
+        /* Build notification banner */
+        .build-notification {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #ff3300;
+            color: white;
+            padding: 12px 16px;
+            text-align: center;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 1000;
+            transform: translateY(-100%);
+            transition: transform 0.3s ease-in-out;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .build-notification.show {
+            transform: translateY(0);
+        }
+        
+        .build-notification .close-btn {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        
+        .build-notification .close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        /* Adjust body padding when notification is shown */
+        body.notification-shown {
+            padding-top: 48px;
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+    <!-- Build Notification Banner -->
+    <div id="buildNotification" class="build-notification">
+        <span id="buildNotificationText"></span>
+        <button class="close-btn" onclick="dismissBuildNotification()" title="Dismiss notification">×</button>
+    </div>
+    
     <div class="w-full max-w-sm mx-auto">
         <!-- Main Player Card -->
         <div class="bg-white rounded-3xl shadow-xl overflow-hidden">
@@ -128,15 +204,17 @@
                      onload="handleAlbumArtLoad(this)"
                      onerror="showAlbumArt(false)">
                 
-                <!-- Fallback SVG Icon -->
-                <div id="albumArtFallback" class="w-32 h-32 bg-white/20 rounded-full flex items-center justify-center">
-                    <svg class="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
-                    </svg>
-                </div>
+                <!-- Placeholder Image -->
+                <img id="albumArtPlaceholder" 
+                     class="w-full h-full object-cover" 
+                     src="./placeholder.png"
+                     alt="No Album Art">
                 
                 <!-- Dark overlay for better text readability when image is shown -->
-                <div id="albumArtOverlay" class="absolute inset-0 bg-black/20 hidden"></div>
+                <div id="albumArtOverlay" class="absolute inset-0 bg-black/20 aspect-square"></div>
+                
+                <!-- YouTube Video Player (hidden by default, shown in video mode) -->
+                <div id="youtube-player" class="absolute inset-0 w-full h-full" style="position: absolute; left: -9999px; top: -9999px; width: 0; height: 0; opacity: 0; pointer-events: none;"></div>
                 
                 <!-- Status indicator -->
                 <div class="absolute top-4 right-4 z-10">
@@ -170,21 +248,24 @@
             <!-- Main Controls -->
             <div class="flex items-center justify-center gap-4 px-6 py-4">
                 <button onclick="toggleShuffle()" id="shuffleBtn" 
-                        class="control-button w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg">
+                        class="control-button cursor-pointer w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg"
+                        title="Toggle shuffle mode">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
                     </svg>
                 </button>
 
                 <button onclick="previous()" 
-                        class="control-button w-10 h-10 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg">
+                        class="control-button cursor-pointer w-10 h-10 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg"
+                        title="Previous track">
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
                     </svg>
                 </button>
 
                 <button onclick="togglePlay()" id="playBtn"
-                        class="control-button play-button w-12 h-12 flex items-center justify-center text-white rounded-full">
+                        class="control-button cursor-pointer play-button w-12 h-12 flex items-center justify-center text-white rounded-full"
+                        title="Play/Pause">
                     <svg id="playIcon" class="w-6 h-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M8 5v14l11-7z"/>
                     </svg>
@@ -194,14 +275,16 @@
                 </button>
 
                 <button onclick="next()" 
-                        class="control-button w-10 h-10 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg">
+                        class="control-button cursor-pointer w-10 h-10 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg"
+                        title="Next track">
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
                     </svg>
                 </button>
 
                 <button onclick="toggleRepeat()" id="repeatBtn"
-                        class="control-button w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg">
+                        class="control-button cursor-pointer w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg"
+                        title="Toggle repeat mode">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                     </svg>
@@ -212,22 +295,36 @@
             <div class="flex items-center justify-between px-6 pb-6">
                 <div class="flex items-center gap-3">
                     <button onclick="toggleLike()" id="likeBtn"
-                            class="control-button w-8 h-8 flex items-center justify-center text-gray-600 hover:text-red-500 rounded-lg">
+                            class="control-button cursor-pointer w-8 h-8 flex items-center justify-center text-gray-600 hover:text-red-500 rounded-lg"
+                            title="Open track on YouTube">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
                         </svg>
                     </button>
 
                     <button onclick="copyTrackInfo()"
-                            class="control-button w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg">
+                            class="control-button cursor-pointer w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg"
+                            title="Copy YouTube URL">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                    </button>
+
+                    <button onclick="toggleVideoMode()" id="videoToggle"
+                            class="control-button cursor-pointer w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg"
+                            title="Toggle video view">
+                        <svg id="videoOffIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                        <svg id="videoOnIcon" class="w-4 h-4 hidden" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
                         </svg>
                     </button>
                 </div>
 
                 <button onclick="togglePlaylist()" id="playlistToggle"
-                        class="control-button w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg">
+                        class="control-button cursor-pointer w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg"
+                        title="Show/hide playlist">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
                     </svg>
@@ -243,6 +340,7 @@
                     <div class="relative">
                         <select id="playlistSelector" onchange="switchPlaylist(this.value)" 
                                 class="text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                            <option value="remote">💀 Finest Music</option>
                             <option value="bangers">🔥 Bangers</option>
                             <option value="mash">🎵 Mash</option>
                         </select>
@@ -267,9 +365,6 @@
 
     </div>
 
-    <!-- Hidden YouTube player container -->
-    <div id="youtube-player" style="position: absolute; left: -9999px; top: -9999px; width: 0; height: 0; opacity: 0; pointer-events: none;"></div>
-
     <!-- Load the player using ES modules from the source -->
     <script type="module">
         import { YouTubeMusicPlayer, RepeatMode } from './src/index.ts';
@@ -279,11 +374,14 @@
         
         // Available playlists
         const availablePlaylists = [
+            { id: 'remote', name: '💀 Finest Music', file: 'playlist-remote.json', default: true },
             { id: 'bangers', name: '🔥 Bangers', file: 'playlist-bangers.json' },
             { id: 'mash', name: '🎵 Mash', file: 'playlist-mash.json' }
         ];
         
-        let currentPlaylistId = 'bangers'; // Default to bangers
+        // Find default playlist (fallback to first one)
+        const defaultPlaylist = availablePlaylists.find(p => p.default) || availablePlaylists[0];
+        let currentPlaylistId = defaultPlaylist.id;
 
         // Load tracklist from JSON file
         async function loadTracklist(playlistFile = null) {
@@ -359,6 +457,20 @@
                 const playlistName = availablePlaylists.find(p => p.id === playlistId)?.name || 'Unknown';
                 updateStatus(`✅ Switched to ${playlistName}!`);
                 
+                // Update URL to reflect playlist change
+                updateBrowserURL();
+                
+                // Save session immediately on playlist change
+                saveSession();
+                
+                // Handle track parameter if present (after playlist switch)
+                if (window.urlTrackParam) {
+                    setTimeout(() => {
+                        jumpToTrackByName(window.urlTrackParam);
+                        delete window.urlTrackParam;
+                    }, 500);
+                }
+                
             } catch (error) {
                 updateStatus('❌ Failed to switch playlist');
                 console.error('Failed to switch playlist:', error);
@@ -392,6 +504,12 @@
                 // Set up event listeners
                 player.on('ready', async () => {
                     updateStatus('🎉 Player ready!');
+                    
+                    // Check build version and show notification if needed
+                    checkBuildVersion();
+                    
+                    // Handle URL parameters first (they take priority over session restore)
+                    await handleURLParameters();
                     // Note: CORS errors from doubleclick.net are normal (YouTube ads) and can be ignored
                     
                     // Only load initial tracks if no playlist exists (prevent duplicates on reload)
@@ -403,11 +521,35 @@
                     }
                     
                     updateUI();
+                    
+                    // Handle track parameter if present (after playlist is loaded)
+                    if (window.urlTrackParam) {
+                        setTimeout(() => {
+                            jumpToTrackByName(window.urlTrackParam);
+                            delete window.urlTrackParam;
+                        }, 500); // Small delay to ensure playlist is fully loaded
+                    }
+                    
+                    // Restore session if no URL parameters were provided
+                    if (!window.location.search) {
+                        setTimeout(async () => {
+                            await restoreSession();
+                        }, 1500);
+                    }
+                    
+                    // Update URL to reflect initial state (after small delay)
+                    setTimeout(() => {
+                        updateBrowserURL();
+                    }, 2000);
                 });
 
                 player.on('trackChange', (data) => {
                     updateCurrentTrack(data.track);
                     updatePlaylist();
+                    // Update URL to reflect track change
+                    updateBrowserURL();
+                    // Save session immediately on track change
+                    saveSession();
                 });
 
                 player.on('stateChange', (data) => {
@@ -422,6 +564,8 @@
 
                 player.on('timeUpdate', (data) => {
                     updateProgress(data.currentTime, data.duration);
+                    // Save progress with 30-second throttling
+                    saveProgressThrottled();
                 });
 
                 player.on('playlistChange', () => {
@@ -430,6 +574,8 @@
 
                 player.on('settingsChange', () => {
                     updateSettingsButtons();
+                    // Save session immediately on settings change
+                    saveSession();
                 });
 
                 player.on('error', (error) => {
@@ -483,51 +629,30 @@
             }
         }
 
-        // Handle album art load and aspect ratio detection
+        // Handle album art load (simplified - always square)
         function handleAlbumArtLoad(img) {
-            const aspectRatio = img.naturalWidth / img.naturalHeight;
-            const container = document.getElementById('albumArtContainer');
-            
-            // Debug info (can be removed in production)
-            console.log(`Album art loaded: ${img.naturalWidth}x${img.naturalHeight}, aspect ratio: ${aspectRatio.toFixed(2)}`);
-            
-            // Determine if image is more square (1:1) or widescreen (16:9)
-            // Threshold of 1.3 to account for slight variations
-            if (aspectRatio > 1.3) {
-                // Widescreen image (16:9 or similar)
-                container.classList.remove('aspect-square');
-                container.classList.add('aspect-video');
-                console.log('Applied aspect-video class');
-            } else {
-                // Square or portrait image
-                container.classList.remove('aspect-video');
-                container.classList.add('aspect-square');
-                console.log('Applied aspect-square class');
-            }
-            
-            // Show the image
+            console.log(`Album art loaded: ${img.naturalWidth}x${img.naturalHeight}`);
             showAlbumArt(true);
         }
 
         // Show/hide album art based on load success
         function showAlbumArt(success) {
             const albumArt = document.getElementById('albumArt');
-            const fallback = document.getElementById('albumArtFallback');
+            const placeholder = document.getElementById('albumArtPlaceholder');
             const overlay = document.getElementById('albumArtOverlay');
             
             if (success) {
                 albumArt.classList.remove('hidden');
-                fallback.classList.add('hidden');
+                placeholder.classList.add('hidden');
                 overlay.classList.remove('hidden');
             } else {
-                albumArt.classList.add('hidden');
-                fallback.classList.remove('hidden');
-                overlay.classList.add('hidden');
+                // Randomly select one of the placeholder images (0-3)
+                const randomIndex = Math.floor(Math.random() * 4);
+                placeholder.src = `./placeholder_${randomIndex}.png`;
                 
-                // Reset to square aspect ratio for fallback
-                const container = document.getElementById('albumArtContainer');
-                container.classList.remove('aspect-video');
-                container.classList.add('aspect-square');
+                albumArt.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+                overlay.classList.add('hidden');
             }
         }
 
@@ -791,12 +916,303 @@
             }
         };
 
+        // Video mode toggle functionality
+        let isVideoMode = localStorage.getItem('ytMusicPlayer:videoMode') === 'true';
+        
+        window.toggleVideoMode = function() {
+            isVideoMode = !isVideoMode;
+            const body = document.body;
+            const videoOffIcon = document.getElementById('videoOffIcon');
+            const videoOnIcon = document.getElementById('videoOnIcon');
+            
+            if (isVideoMode) {
+                body.classList.add('video-mode');
+                videoOffIcon.classList.add('hidden');
+                videoOnIcon.classList.remove('hidden');
+                console.log('🎬 Video mode enabled');
+            } else {
+                body.classList.remove('video-mode');
+                videoOffIcon.classList.remove('hidden');
+                videoOnIcon.classList.add('hidden');
+                console.log('🖼️ Album art mode enabled');
+            }
+            
+            // Save preference
+            localStorage.setItem('ytMusicPlayer:videoMode', isVideoMode.toString());
+            
+            // Update URL to reflect video mode change
+            updateBrowserURL();
+        };
+        
+        // Initialize video mode state
+        function initVideoMode() {
+            if (isVideoMode) {
+                toggleVideoMode();
+            }
+        }
+
+        // Parse URL parameters for deep linking
+        function parseURLParameters() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return {
+                playlist: urlParams.get('playlist'),
+                track: urlParams.get('track'), 
+                video: urlParams.get('video') === 'true'
+            };
+        }
+
+        // Handle URL parameters for deep linking
+        async function handleURLParameters() {
+            const params = parseURLParameters();
+            
+            // Handle video mode parameter
+            if (params.video && !isVideoMode) {
+                console.log('🎬 Enabling video mode from URL parameter');
+                toggleVideoMode();
+            }
+            
+            // Handle playlist parameter
+            if (params.playlist) {
+                const playlistExists = availablePlaylists.find(p => p.id === params.playlist);
+                if (playlistExists && params.playlist !== currentPlaylistId) {
+                    console.log(`📋 Loading playlist from URL: ${params.playlist}`);
+                    await switchPlaylist(params.playlist);
+                }
+            }
+            
+            // Handle track parameter - will be implemented after playlist loads
+            if (params.track) {
+                // Store for later use when playlist is ready
+                window.urlTrackParam = params.track;
+            }
+        }
+
+        // Jump to track by name or ID (for URL parameter)
+        function jumpToTrackByName(trackIdentifier) {
+            const playlist = player.getPlaylist();
+            if (!playlist || !playlist.tracks.length) {
+                console.warn('No playlist loaded for track jump');
+                return false;
+            }
+            
+            // Try to find track by title (case insensitive) or by video ID
+            const trackIndex = playlist.tracks.findIndex(track => 
+                track.title.toLowerCase().includes(trackIdentifier.toLowerCase()) ||
+                track.id === trackIdentifier ||
+                (track.artist && `${track.artist} - ${track.title}`.toLowerCase().includes(trackIdentifier.toLowerCase()))
+            );
+            
+            if (trackIndex !== -1) {
+                console.log(`🎵 Jumping to track: ${playlist.tracks[trackIndex].title}`);
+                player.jumpToTrack(trackIndex);
+                return true;
+            } else {
+                console.warn(`Track not found: ${trackIdentifier}`);
+                return false;
+            }
+        }
+
+        // Update browser URL to reflect current state
+        function updateBrowserURL() {
+            const currentTrack = player?.getCurrentTrack();
+            const params = new URLSearchParams();
+            
+            // Add playlist parameter if not default
+            if (currentPlaylistId !== defaultPlaylist.id) {
+                params.set('playlist', currentPlaylistId);
+            }
+            
+            // Add track parameter if a track is playing
+            if (currentTrack && currentTrack.title) {
+                // Use a sanitized version of the track title for readability
+                const trackParam = currentTrack.title
+                    .toLowerCase()
+                    .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+                    .replace(/\s+/g, '-') // Replace spaces with dashes
+                    .substring(0, 50); // Limit length
+                params.set('track', trackParam);
+            }
+            
+            // Add video parameter if video mode is enabled
+            if (isVideoMode) {
+                params.set('video', 'true');
+            }
+            
+            // Build the new URL
+            const baseUrl = window.location.pathname;
+            const queryString = params.toString();
+            const newUrl = queryString ? `${baseUrl}?${queryString}` : baseUrl;
+            
+            // Update the URL without reloading the page
+            window.history.replaceState({}, '', newUrl);
+        }
+
+        // Enhanced Session Management System
+        const SESSION_KEY = 'ytPlayer:session';
+        const BUILD_TIME_KEY = 'ytPlayer:buildTime';
+        let lastProgressSave = 0; // Timestamp of last progress save
+        let sessionData = {};
+
+        // Save session data to localStorage
+        function saveSession() {
+            try {
+                const currentTrack = player?.getCurrentTrack();
+                const playlist = player?.getPlaylist();
+                const settings = player?.getSettings();
+                
+                sessionData = {
+                    playlist: currentPlaylistId,
+                    track: currentTrack?.id || null,
+                    shuffle: settings?.shuffled || false,
+                    repeat: settings?.repeatMode || 'none',
+                    video: isVideoMode,
+                    progress: player?.getCurrentTime() || 0,
+                    volume: player?.getVolume() || 100,
+                    lastSaved: Date.now()
+                };
+                
+                localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+                console.log('💾 Session saved');
+            } catch (error) {
+                console.warn('Failed to save session:', error);
+            }
+        }
+
+        // Save progress with 30-second throttling
+        function saveProgressThrottled() {
+            const now = Date.now();
+            if (now - lastProgressSave >= 30000) { // 30 seconds
+                lastProgressSave = now;
+                saveSession();
+            }
+        }
+
+        // Load session data from localStorage
+        function loadSession() {
+            try {
+                const stored = localStorage.getItem(SESSION_KEY);
+                if (stored) {
+                    return JSON.parse(stored);
+                }
+            } catch (error) {
+                console.warn('Failed to load session:', error);
+            }
+            return null;
+        }
+
+        // Restore session state
+        async function restoreSession() {
+            const session = loadSession();
+            if (!session) {
+                console.log('No session to restore');
+                return;
+            }
+
+            console.log('🔄 Restoring session...', session);
+
+            try {
+                // Restore playlist if different
+                if (session.playlist && session.playlist !== currentPlaylistId) {
+                    await switchPlaylist(session.playlist);
+                }
+
+                // Wait for playlist to load
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Restore track
+                if (session.track) {
+                    const playlist = player.getPlaylist();
+                    const trackIndex = playlist.tracks.findIndex(track => track.id === session.track);
+                    if (trackIndex !== -1) {
+                        player.jumpToTrack(trackIndex);
+                        
+                        // Restore progress after track loads
+                        setTimeout(() => {
+                            if (session.progress > 0) {
+                                player.seekTo(session.progress);
+                                console.log(`⏱️ Restored progress: ${Math.floor(session.progress)}s`);
+                            }
+                        }, 1000);
+                    }
+                }
+
+                // Restore settings
+                if (session.shuffle !== undefined) {
+                    const currentSettings = player.getSettings();
+                    if (currentSettings.shuffled !== session.shuffle) {
+                        player.toggleShuffle();
+                    }
+                }
+
+                // Restore video mode
+                if (session.video !== isVideoMode) {
+                    toggleVideoMode();
+                }
+
+                console.log('✅ Session restored successfully');
+            } catch (error) {
+                console.warn('Failed to restore session:', error);
+            }
+        }
+
+        // Build notification system
+        function checkBuildVersion() {
+            try {
+                const currentBuildTime = document.querySelector('meta[name="build-time"]')?.content;
+                if (!currentBuildTime) {
+                    console.log('No build time found in meta tag');
+                    return;
+                }
+
+                const storedBuildTime = localStorage.getItem(BUILD_TIME_KEY);
+                const dismissKey = `ytPlayer:buildDismissed:${currentBuildTime}`;
+                const isDismissed = localStorage.getItem(dismissKey) === 'true';
+
+                if (storedBuildTime && storedBuildTime !== currentBuildTime && !isDismissed) {
+                    showBuildNotification(currentBuildTime);
+                }
+
+                // Always update stored build time
+                localStorage.setItem(BUILD_TIME_KEY, currentBuildTime);
+            } catch (error) {
+                console.warn('Failed to check build version:', error);
+            }
+        }
+
+        function showBuildNotification(buildTime) {
+            const notification = document.getElementById('buildNotification');
+            const notificationText = document.getElementById('buildNotificationText');
+            
+            notificationText.textContent = `${buildTime} New version available - more bangers, more tracks`;
+            
+            // Show notification
+            setTimeout(() => {
+                notification.classList.add('show');
+                document.body.classList.add('notification-shown');
+            }, 500);
+        }
+
+        window.dismissBuildNotification = function() {
+            const notification = document.getElementById('buildNotification');
+            const currentBuildTime = document.querySelector('meta[name="build-time"]')?.content;
+            
+            // Hide notification
+            notification.classList.remove('show');
+            document.body.classList.remove('notification-shown');
+            
+            // Mark as dismissed for this build
+            if (currentBuildTime) {
+                localStorage.setItem(`ytPlayer:buildDismissed:${currentBuildTime}`, 'true');
+            }
+        };
+
         // Make album art functions globally available for HTML callbacks
         window.showAlbumArt = showAlbumArt;
         window.handleAlbumArtLoad = handleAlbumArtLoad;
 
         // Initialize player when page loads
         initPlayer();
+        initVideoMode();
     </script>
 </body>
 </html> 
