@@ -1,0 +1,32 @@
+[
+  {
+    "id": "9bZkp7q19f0",
+    "title": "Gangnam Style",
+    "artist": "PSY",
+    "tags": ["k-pop", "dance", "viral", "2012"]
+  },
+  {
+    "id": "kJQP7kiw5Fk", 
+    "title": "Despacito",
+    "artist": "Luis Fonsi ft. Daddy Yankee",
+    "tags": ["latin", "reggaeton", "spanish", "2017"]
+  },
+  {
+    "id": "uelHwf8o7_U",
+    "title": "See You Again",
+    "artist": "Wiz Khalifa ft. Charlie Puth",
+    "tags": ["hip-hop", "emotional", "tribute", "2015"]
+  },
+  {
+    "id": "M7lc1UVf-VE",
+    "title": "Uptown Funk",
+    "artist": "Mark Ronson ft. Bruno Mars",
+    "tags": ["funk", "pop", "dance", "2014"]
+  },
+  {
+    "id": "YQHsXMglC9A",
+    "title": "Hello",
+    "artist": "Adele",
+    "tags": ["pop", "ballad", "emotional", "2015"]
+  }
+] 
