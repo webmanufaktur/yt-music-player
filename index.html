@@ -113,6 +113,27 @@
             transition: width 0.1s ease;
             border-radius: 2px;
         }
+        
+        /* Video mode styles */
+        .video-mode #albumArtContainer {
+            aspect-ratio: 16 / 9;
+        }
+        
+        .video-mode #youtube-player {
+            position: relative !important;
+            left: auto !important;
+            top: auto !important;
+            width: 100% !important;
+            height: 100% !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+        
+        .video-mode #albumArt,
+        .video-mode #albumArtPlaceholder,
+        .video-mode #albumArtOverlay {
+            display: none !important;
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
@@ -128,15 +149,17 @@
                      onload="handleAlbumArtLoad(this)"
                      onerror="showAlbumArt(false)">
                 
-                <!-- Fallback SVG Icon -->
-                <div id="albumArtFallback" class="w-32 h-32 bg-white/20 rounded-full flex items-center justify-center">
-                    <svg class="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
-                    </svg>
-                </div>
+                <!-- Placeholder Image -->
+                <img id="albumArtPlaceholder" 
+                     class="w-full h-full object-cover" 
+                     src="./placeholder.png"
+                     alt="No Album Art">
                 
                 <!-- Dark overlay for better text readability when image is shown -->
-                <div id="albumArtOverlay" class="absolute inset-0 bg-black/20 hidden"></div>
+                <div id="albumArtOverlay" class="absolute inset-0 bg-black/20 aspect-square"></div>
+                
+                <!-- YouTube Video Player (hidden by default, shown in video mode) -->
+                <div id="youtube-player" class="absolute inset-0 w-full h-full" style="position: absolute; left: -9999px; top: -9999px; width: 0; height: 0; opacity: 0; pointer-events: none;"></div>
                 
                 <!-- Status indicator -->
                 <div class="absolute top-4 right-4 z-10">
@@ -170,21 +193,24 @@
             <!-- Main Controls -->
             <div class="flex items-center justify-center gap-4 px-6 py-4">
                 <button onclick="toggleShuffle()" id="shuffleBtn" 
-                        class="control-button w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg">
+                        class="control-button cursor-pointer w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg"
+                        title="Toggle shuffle mode">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
                     </svg>
                 </button>
 
                 <button onclick="previous()" 
-                        class="control-button w-10 h-10 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg">
+                        class="control-button cursor-pointer w-10 h-10 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg"
+                        title="Previous track">
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
                     </svg>
                 </button>
 
                 <button onclick="togglePlay()" id="playBtn"
-                        class="control-button play-button w-12 h-12 flex items-center justify-center text-white rounded-full">
+                        class="control-button cursor-pointer play-button w-12 h-12 flex items-center justify-center text-white rounded-full"
+                        title="Play/Pause">
                     <svg id="playIcon" class="w-6 h-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M8 5v14l11-7z"/>
                     </svg>
@@ -194,14 +220,16 @@
                 </button>
 
                 <button onclick="next()" 
-                        class="control-button w-10 h-10 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg">
+                        class="control-button cursor-pointer w-10 h-10 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg"
+                        title="Next track">
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
                     </svg>
                 </button>
 
                 <button onclick="toggleRepeat()" id="repeatBtn"
-                        class="control-button w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg">
+                        class="control-button cursor-pointer w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg"
+                        title="Toggle repeat mode">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                     </svg>
@@ -212,22 +240,36 @@
             <div class="flex items-center justify-between px-6 pb-6">
                 <div class="flex items-center gap-3">
                     <button onclick="toggleLike()" id="likeBtn"
-                            class="control-button w-8 h-8 flex items-center justify-center text-gray-600 hover:text-red-500 rounded-lg">
+                            class="control-button cursor-pointer w-8 h-8 flex items-center justify-center text-gray-600 hover:text-red-500 rounded-lg"
+                            title="Open track on YouTube">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
                         </svg>
                     </button>
 
                     <button onclick="copyTrackInfo()"
-                            class="control-button w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg">
+                            class="control-button cursor-pointer w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg"
+                            title="Copy YouTube URL">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                    </button>
+
+                    <button onclick="toggleVideoMode()" id="videoToggle"
+                            class="control-button cursor-pointer w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg"
+                            title="Toggle video view">
+                        <svg id="videoOffIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                        <svg id="videoOnIcon" class="w-4 h-4 hidden" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
                         </svg>
                     </button>
                 </div>
 
                 <button onclick="togglePlaylist()" id="playlistToggle"
-                        class="control-button w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg">
+                        class="control-button cursor-pointer w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-lg"
+                        title="Show/hide playlist">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
                     </svg>
@@ -267,9 +309,6 @@
 
 
     </div>
-
-    <!-- Hidden YouTube player container -->
-    <div id="youtube-player" style="position: absolute; left: -9999px; top: -9999px; width: 0; height: 0; opacity: 0; pointer-events: none;"></div>
 
     <!-- Load the player using ES modules from the source -->
     <script type="module">
@@ -487,51 +526,26 @@
             }
         }
 
-        // Handle album art load and aspect ratio detection
+        // Handle album art load (simplified - always square)
         function handleAlbumArtLoad(img) {
-            const aspectRatio = img.naturalWidth / img.naturalHeight;
-            const container = document.getElementById('albumArtContainer');
-            
-            // Debug info (can be removed in production)
-            console.log(`Album art loaded: ${img.naturalWidth}x${img.naturalHeight}, aspect ratio: ${aspectRatio.toFixed(2)}`);
-            
-            // Determine if image is more square (1:1) or widescreen (16:9)
-            // Threshold of 1.3 to account for slight variations
-            if (aspectRatio > 1.3) {
-                // Widescreen image (16:9 or similar)
-                container.classList.remove('aspect-square');
-                container.classList.add('aspect-video');
-                console.log('Applied aspect-video class');
-            } else {
-                // Square or portrait image
-                container.classList.remove('aspect-video');
-                container.classList.add('aspect-square');
-                console.log('Applied aspect-square class');
-            }
-            
-            // Show the image
+            console.log(`Album art loaded: ${img.naturalWidth}x${img.naturalHeight}`);
             showAlbumArt(true);
         }
 
         // Show/hide album art based on load success
         function showAlbumArt(success) {
             const albumArt = document.getElementById('albumArt');
-            const fallback = document.getElementById('albumArtFallback');
+            const placeholder = document.getElementById('albumArtPlaceholder');
             const overlay = document.getElementById('albumArtOverlay');
             
             if (success) {
                 albumArt.classList.remove('hidden');
-                fallback.classList.add('hidden');
+                placeholder.classList.add('hidden');
                 overlay.classList.remove('hidden');
             } else {
                 albumArt.classList.add('hidden');
-                fallback.classList.remove('hidden');
+                placeholder.classList.remove('hidden');
                 overlay.classList.add('hidden');
-                
-                // Reset to square aspect ratio for fallback
-                const container = document.getElementById('albumArtContainer');
-                container.classList.remove('aspect-video');
-                container.classList.add('aspect-square');
             }
         }
 
@@ -795,12 +809,45 @@
             }
         };
 
+        // Video mode toggle functionality
+        let isVideoMode = localStorage.getItem('ytMusicPlayer:videoMode') === 'true';
+        
+        window.toggleVideoMode = function() {
+            isVideoMode = !isVideoMode;
+            const body = document.body;
+            const videoOffIcon = document.getElementById('videoOffIcon');
+            const videoOnIcon = document.getElementById('videoOnIcon');
+            
+            if (isVideoMode) {
+                body.classList.add('video-mode');
+                videoOffIcon.classList.add('hidden');
+                videoOnIcon.classList.remove('hidden');
+                console.log('🎬 Video mode enabled');
+            } else {
+                body.classList.remove('video-mode');
+                videoOffIcon.classList.remove('hidden');
+                videoOnIcon.classList.add('hidden');
+                console.log('🖼️ Album art mode enabled');
+            }
+            
+            // Save preference
+            localStorage.setItem('ytMusicPlayer:videoMode', isVideoMode.toString());
+        };
+        
+        // Initialize video mode state
+        function initVideoMode() {
+            if (isVideoMode) {
+                toggleVideoMode();
+            }
+        }
+
         // Make album art functions globally available for HTML callbacks
         window.showAlbumArt = showAlbumArt;
         window.handleAlbumArtLoad = handleAlbumArtLoad;
 
         // Initialize player when page loads
         initPlayer();
+        initVideoMode();
     </script>
 </body>
 </html> 

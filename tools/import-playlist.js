@@ -237,18 +237,18 @@ async function main() {
   const args = process.argv.slice(2);
   
   if (args.length < 1) {
-    console.error('Usage: node import-playlist.js <PLAYLIST_ID> [OUTPUT_NAME]');
-    console.error('       npm run import <PLAYLIST_ID> [OUTPUT_NAME]');
+    console.error('Usage: node import-playlist.js <PLAYLIST_ID> [PLAYLIST_NAME]');
+    console.error('       npm run import <PLAYLIST_ID> [PLAYLIST_NAME]');
     console.error('');
     console.error('Examples:');
     console.error('  node tools/import-playlist.js PLgHbFbnlci0Qq5yASCgE9416yvx7KwpnR');
-    console.error('  node tools/import-playlist.js PLgHbFbnlci0Qq5yASCgE9416yvx7KwpnR finest-music');
-    console.error('  npm run import PLgHbFbnlci0Qq5yASCgE9416yvx7KwpnR');
+    console.error('  node tools/import-playlist.js PLgHbFbnlci0Qq5yASCgE9416yvx7KwpnR "Finest Music"');
+    console.error('  npm run import PLgHbFbnlci0Qq5yASCgE9416yvx7KwpnR "My Playlist"');
     process.exit(1);
   }
   
   const playlistId = args[0];
-  const customName = args[1];
+  const playlistName = args[1];
   
   // Validate playlist ID format
   if (!playlistId.match(/^[A-Za-z0-9_-]+$/)) {
@@ -275,13 +275,22 @@ async function main() {
     console.log('📋 Fetching playlist information...');
     const playlistTitle = await getPlaylistTitle(playlistId);
     
-    // Generate output name
-    const outputName = customName || (playlistTitle ? 
-      playlistTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') : 
-      generatePlaylistName(playlistId)
-    );
+    // Generate output name based on priority: playlistName > playlistId
+    let outputName;
+    if (playlistName && playlistName.trim()) {
+      // Use provided playlist name, sanitize for filename
+      outputName = playlistName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    } else {
+      // Use playlist ID as fallback
+      outputName = playlistId;
+    }
     
     const outputPath = path.join(__dirname, '..', 'public', `playlist-${outputName}.json`);
+    
+    // Check if file already exists and warn about overwrite
+    if (fs.existsSync(outputPath)) {
+      console.log(`⚠️ File playlist-${outputName}.json already exists and will be overwritten`);
+    }
     
     console.log(`🎵 Importing playlist: ${playlistTitle || playlistId}`);
     console.log(`📁 Output file: playlist-${outputName}.json`);
@@ -325,7 +334,8 @@ async function main() {
     console.log('');
     console.log('🚀 Playlist imported successfully!');
     console.log('💡 Add this playlist to your index.html availablePlaylists array:');
-    console.log(`   { id: '${outputName}', name: '🎵 ${playlistTitle || 'Imported Playlist'}', file: 'playlist-${outputName}.json' }`);
+    const displayName = playlistName || playlistTitle || 'Imported Playlist';
+    console.log(`   { id: '${outputName}', name: '🎵 ${displayName}', file: 'playlist-${outputName}.json' }`);
     
   } catch (error) {
     console.error(`❌ Error importing playlist: ${error.message}`);
