@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="build-time" content="2025-07-27">
     <title>🎵 Modern YouTube Music Player</title>
+    <link rel="stylesheet" href="./public/fonts/plex-mono/plex-mono.css">
     <link rel="stylesheet" href="./src/styles.css">
     <style>
         /* Additional custom styles for the modern player */
@@ -134,9 +136,62 @@
         .video-mode #albumArtOverlay {
             display: none !important;
         }
+        
+        /* Build notification banner */
+        .build-notification {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #ff3300;
+            color: white;
+            padding: 12px 16px;
+            text-align: center;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 1000;
+            transform: translateY(-100%);
+            transition: transform 0.3s ease-in-out;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .build-notification.show {
+            transform: translateY(0);
+        }
+        
+        .build-notification .close-btn {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        
+        .build-notification .close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        /* Adjust body padding when notification is shown */
+        body.notification-shown {
+            padding-top: 48px;
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+    <!-- Build Notification Banner -->
+    <div id="buildNotification" class="build-notification">
+        <span id="buildNotificationText"></span>
+        <button class="close-btn" onclick="dismissBuildNotification()" title="Dismiss notification">×</button>
+    </div>
+    
     <div class="w-full max-w-sm mx-auto">
         <!-- Main Player Card -->
         <div class="bg-white rounded-3xl shadow-xl overflow-hidden">
@@ -405,6 +460,9 @@
                 // Update URL to reflect playlist change
                 updateBrowserURL();
                 
+                // Save session immediately on playlist change
+                saveSession();
+                
                 // Handle track parameter if present (after playlist switch)
                 if (window.urlTrackParam) {
                     setTimeout(() => {
@@ -447,7 +505,10 @@
                 player.on('ready', async () => {
                     updateStatus('🎉 Player ready!');
                     
-                    // Handle URL parameters first
+                    // Check build version and show notification if needed
+                    checkBuildVersion();
+                    
+                    // Handle URL parameters first (they take priority over session restore)
                     await handleURLParameters();
                     // Note: CORS errors from doubleclick.net are normal (YouTube ads) and can be ignored
                     
@@ -469,10 +530,17 @@
                         }, 500); // Small delay to ensure playlist is fully loaded
                     }
                     
+                    // Restore session if no URL parameters were provided
+                    if (!window.location.search) {
+                        setTimeout(async () => {
+                            await restoreSession();
+                        }, 1500);
+                    }
+                    
                     // Update URL to reflect initial state (after small delay)
                     setTimeout(() => {
                         updateBrowserURL();
-                    }, 1000);
+                    }, 2000);
                 });
 
                 player.on('trackChange', (data) => {
@@ -480,6 +548,8 @@
                     updatePlaylist();
                     // Update URL to reflect track change
                     updateBrowserURL();
+                    // Save session immediately on track change
+                    saveSession();
                 });
 
                 player.on('stateChange', (data) => {
@@ -494,6 +564,8 @@
 
                 player.on('timeUpdate', (data) => {
                     updateProgress(data.currentTime, data.duration);
+                    // Save progress with 30-second throttling
+                    saveProgressThrottled();
                 });
 
                 player.on('playlistChange', () => {
@@ -502,6 +574,8 @@
 
                 player.on('settingsChange', () => {
                     updateSettingsButtons();
+                    // Save session immediately on settings change
+                    saveSession();
                 });
 
                 player.on('error', (error) => {
@@ -972,6 +1046,165 @@
             // Update the URL without reloading the page
             window.history.replaceState({}, '', newUrl);
         }
+
+        // Enhanced Session Management System
+        const SESSION_KEY = 'ytPlayer:session';
+        const BUILD_TIME_KEY = 'ytPlayer:buildTime';
+        let lastProgressSave = 0; // Timestamp of last progress save
+        let sessionData = {};
+
+        // Save session data to localStorage
+        function saveSession() {
+            try {
+                const currentTrack = player?.getCurrentTrack();
+                const playlist = player?.getPlaylist();
+                const settings = player?.getSettings();
+                
+                sessionData = {
+                    playlist: currentPlaylistId,
+                    track: currentTrack?.id || null,
+                    shuffle: settings?.shuffled || false,
+                    repeat: settings?.repeatMode || 'none',
+                    video: isVideoMode,
+                    progress: player?.getCurrentTime() || 0,
+                    volume: player?.getVolume() || 100,
+                    lastSaved: Date.now()
+                };
+                
+                localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+                console.log('💾 Session saved');
+            } catch (error) {
+                console.warn('Failed to save session:', error);
+            }
+        }
+
+        // Save progress with 30-second throttling
+        function saveProgressThrottled() {
+            const now = Date.now();
+            if (now - lastProgressSave >= 30000) { // 30 seconds
+                lastProgressSave = now;
+                saveSession();
+            }
+        }
+
+        // Load session data from localStorage
+        function loadSession() {
+            try {
+                const stored = localStorage.getItem(SESSION_KEY);
+                if (stored) {
+                    return JSON.parse(stored);
+                }
+            } catch (error) {
+                console.warn('Failed to load session:', error);
+            }
+            return null;
+        }
+
+        // Restore session state
+        async function restoreSession() {
+            const session = loadSession();
+            if (!session) {
+                console.log('No session to restore');
+                return;
+            }
+
+            console.log('🔄 Restoring session...', session);
+
+            try {
+                // Restore playlist if different
+                if (session.playlist && session.playlist !== currentPlaylistId) {
+                    await switchPlaylist(session.playlist);
+                }
+
+                // Wait for playlist to load
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Restore track
+                if (session.track) {
+                    const playlist = player.getPlaylist();
+                    const trackIndex = playlist.tracks.findIndex(track => track.id === session.track);
+                    if (trackIndex !== -1) {
+                        player.jumpToTrack(trackIndex);
+                        
+                        // Restore progress after track loads
+                        setTimeout(() => {
+                            if (session.progress > 0) {
+                                player.seekTo(session.progress);
+                                console.log(`⏱️ Restored progress: ${Math.floor(session.progress)}s`);
+                            }
+                        }, 1000);
+                    }
+                }
+
+                // Restore settings
+                if (session.shuffle !== undefined) {
+                    const currentSettings = player.getSettings();
+                    if (currentSettings.shuffled !== session.shuffle) {
+                        player.toggleShuffle();
+                    }
+                }
+
+                // Restore video mode
+                if (session.video !== isVideoMode) {
+                    toggleVideoMode();
+                }
+
+                console.log('✅ Session restored successfully');
+            } catch (error) {
+                console.warn('Failed to restore session:', error);
+            }
+        }
+
+        // Build notification system
+        function checkBuildVersion() {
+            try {
+                const currentBuildTime = document.querySelector('meta[name="build-time"]')?.content;
+                if (!currentBuildTime) {
+                    console.log('No build time found in meta tag');
+                    return;
+                }
+
+                const storedBuildTime = localStorage.getItem(BUILD_TIME_KEY);
+                const dismissKey = `ytPlayer:buildDismissed:${currentBuildTime}`;
+                const isDismissed = localStorage.getItem(dismissKey) === 'true';
+
+                if (storedBuildTime && storedBuildTime !== currentBuildTime && !isDismissed) {
+                    showBuildNotification(currentBuildTime);
+                }
+
+                // Always update stored build time
+                localStorage.setItem(BUILD_TIME_KEY, currentBuildTime);
+            } catch (error) {
+                console.warn('Failed to check build version:', error);
+            }
+        }
+
+        function showBuildNotification(buildTime) {
+            const notification = document.getElementById('buildNotification');
+            const notificationText = document.getElementById('buildNotificationText');
+            
+            notificationText.textContent = `${buildTime} New version available - more bangers, more tracks`;
+            
+            // Show notification
+            setTimeout(() => {
+                notification.classList.add('show');
+                document.body.classList.add('notification-shown');
+            }, 500);
+        }
+
+        window.dismissBuildNotification = function() {
+            const notification = document.getElementById('buildNotification');
+            const currentBuildTime = document.querySelector('meta[name="build-time"]')?.content;
+            
+            // Hide notification
+            notification.classList.remove('show');
+            document.body.classList.remove('notification-shown');
+            
+            // Mark as dismissed for this build
+            if (currentBuildTime) {
+                localStorage.setItem(`ytPlayer:buildDismissed:${currentBuildTime}`, 'true');
+            }
+        };
 
         // Make album art functions globally available for HTML callbacks
         window.showAlbumArt = showAlbumArt;
