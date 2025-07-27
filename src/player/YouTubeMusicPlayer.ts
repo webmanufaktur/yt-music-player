@@ -191,8 +191,51 @@ export class YouTubeMusicPlayer {
 
     // Try to skip to next track on certain errors
     if ([100, 101, 150].includes(errorCode) && this.playlist.tracks.length > 1) {
-      this.next();
+      // Mark current track as unplayable to avoid infinite loops
+      if (currentTrack) {
+        currentTrack.unplayable = true;
+      }
+      
+      // Find next playable track
+      this.skipToNextPlayableTrack();
     }
+  }
+
+  /**
+   * Skip to the next playable track, avoiding infinite loops
+   */
+  private skipToNextPlayableTrack(): void {
+    const maxAttempts = this.playlist.tracks.length;
+    let attempts = 0;
+    
+    const tryNextTrack = () => {
+      if (attempts >= maxAttempts) {
+        // All tracks are unplayable
+        console.warn('All tracks in playlist are unplayable');
+        this.emit('error', {
+          type: ErrorType.API_ERROR,
+          message: 'All tracks in playlist are unplayable',
+        });
+        return;
+      }
+      
+      this.next();
+      attempts++;
+      
+      const currentTrack = this.getCurrentTrack();
+      if (!currentTrack?.unplayable) {
+        // Found a playable track - load it
+        setTimeout(() => {
+          this.loadCurrentTrack();
+        }, 500); // Small delay to prevent rapid skipping
+        return;
+      }
+      
+      // Try next track after a small delay
+      setTimeout(tryNextTrack, 1000);
+    };
+    
+    tryNextTrack();
   }
 
   /**

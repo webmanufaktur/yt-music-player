@@ -48,6 +48,7 @@ export interface Track {
   thumbnail?: string;
   url: string;
   addedAt: Date;
+  unplayable?: boolean;
 }
 
 // Playlist Interface
