@@ -1,0 +1,26 @@
+[
+  {
+    "id": "hPiSY2tfEoA",
+    "title": "Test Non-Embeddable Video 1",
+    "artist": "Test Artist",
+    "tags": ["test", "non-embeddable"]
+  },
+  {
+    "id": "-eUIfgwiUO8", 
+    "title": "Test Non-Embeddable Video 2",
+    "artist": "Test Artist",
+    "tags": ["test", "non-embeddable"]
+  },
+  {
+    "id": "dQw4w9WgXcQ",
+    "title": "Rick Astley - Never Gonna Give You Up",
+    "artist": "Rick Astley",
+    "tags": ["classic", "meme", "80s"]
+  },
+  {
+    "id": "nsEtDnglaMU",
+    "title": "Test Non-Embeddable Video 3", 
+    "artist": "Test Artist",
+    "tags": ["test", "non-embeddable"]
+  }
+]
