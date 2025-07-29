@@ -340,7 +340,7 @@
                     <div class="relative">
                         <select id="playlistSelector" onchange="switchPlaylist(this.value)" 
                                 class="text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent">
-                            <option value="remote">💀 Finest Music</option>
+                            <option value="finest">💀 Finest Music</option>
                             <option value="bangers">🔥 Bangers</option>
                             <option value="mash">🎵 Mash</option>
                         </select>
@@ -374,9 +374,9 @@
         
         // Available playlists
         const availablePlaylists = [
-            { id: 'remote', name: '💀 Finest Music', file: 'playlist-remote.json', default: true },
+            { id: 'finest', name: '💀 Finest Music', file: 'playlist-finest-music.json', default: true },
             { id: 'bangers', name: '🔥 Bangers', file: 'playlist-bangers.json' },
-            { id: 'mash', name: '🎵 Mash', file: 'playlist-mash.json' }
+            { id: 'mash', name: '🎵 Mash', file: 'playlist-mash.json' },
         ];
         
         // Find default playlist (fallback to first one)
